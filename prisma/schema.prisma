@@ -1,0 +1,669 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearchPostgres"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  VISITOR
+  CONTRIBUTOR
+  EDITOR
+  PUBLISHER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  INVITED
+}
+
+enum ArticleStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+  TRASH
+}
+
+enum ContentLanguage {
+  en
+  am
+}
+
+enum HomepageSlotType {
+  LEAD
+  SECONDARY
+}
+
+enum MediaKind {
+  IMAGE
+  AUDIO
+  DOCUMENT
+}
+
+enum SubscriberStatus {
+  PENDING
+  ACTIVE
+  UNSUBSCRIBED
+}
+
+enum CampaignStatus {
+  DRAFT
+  TEST_SENT
+  SENDING
+  SENT
+  FAILED
+}
+
+enum ContactStatus {
+  NEW
+  READ
+  ARCHIVED
+  REPLIED
+}
+
+enum AdSlotKey {
+  HEADER
+  SIDEBAR
+  IN_ARTICLE
+  FOOTER
+}
+
+model User {
+  id               String     @id @default(uuid()) @db.Uuid
+  email            String     @unique
+  emailNormalized  String     @unique
+  passwordHash     String
+  name             String
+  role             Role       @default(CONTRIBUTOR)
+  status           UserStatus @default(ACTIVE)
+  failedLoginCount Int        @default(0)
+  lockedUntil      DateTime?
+  lastLoginAt      DateTime?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  deletedAt        DateTime?
+
+  sessions          Session[]
+  passwordResets    PasswordResetToken[]
+  invitationsSent   Invitation[]         @relation("InvitedBy")
+  authorProfile     AuthorProfile?
+  articlesAuthored  Article[]            @relation("ArticleAuthor")
+  articlesUpdated   Article[]            @relation("ArticleUpdatedBy")
+  revisions         ArticleRevision[]
+  stateLogs         ArticleStateLog[]
+  editorialNotes    EditorialNote[]
+  mediaUploaded     Media[]
+  auditLogs         AuditLog[]
+  previewTokens     PreviewToken[]
+  campaignsCreated  NewsletterCampaign[]
+
+  @@index([role, status])
+  @@index([emailNormalized])
+}
+
+model Session {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @db.Uuid
+  tokenHash    String    @unique
+  userAgent    String?
+  ipAddress    String?
+  lastActiveAt DateTime  @default(now())
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  createdAt    DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Invitation {
+  id        String    @id @default(uuid()) @db.Uuid
+  email     String
+  role      Role
+  tokenHash String    @unique
+  invitedBy String    @db.Uuid
+  expiresAt DateTime
+  acceptedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  inviter User @relation("InvitedBy", fields: [invitedBy], references: [id])
+
+  @@index([email])
+}
+
+model AuthorProfile {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String?  @unique @db.Uuid
+  displayName String
+  username    String   @unique
+  bio         String?  @db.Text
+  photoMediaId String? @db.Uuid
+  socialLinks Json?
+  isPublic    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user  User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  photo Media?  @relation(fields: [photoMediaId], references: [id], onDelete: SetNull)
+  articles Article[]
+
+  @@index([username])
+}
+
+model Category {
+  id          String   @id @default(uuid()) @db.Uuid
+  nameEn      String
+  nameAm      String?
+  slug        String   @unique
+  description String?  @db.Text
+  color       String?
+  parentId    String?  @db.Uuid
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  parent       Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children     Category[] @relation("CategoryTree")
+  articles     Article[]
+  videos       Video[]
+  podcasts     Podcast[]
+  homepageCats HomepageCategory[]
+
+  @@index([parentId, sortOrder])
+  @@index([isActive, sortOrder])
+}
+
+model Tag {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  articles ArticleTag[]
+
+  @@index([name])
+}
+
+model Article {
+  id                 String           @id @default(uuid()) @db.Uuid
+  headline           String
+  subheadline        String?
+  slug               String
+  summary            String           @db.VarChar(300)
+  body               Json
+  status             ArticleStatus    @default(DRAFT)
+  language           ContentLanguage  @default(en)
+  translationGroupId String?          @db.Uuid
+  categoryId         String           @db.Uuid
+  authorId           String           @db.Uuid
+  authorProfileId    String?          @db.Uuid
+  updatedById        String?          @db.Uuid
+  featuredMediaId    String?          @db.Uuid
+  seoTitle           String?
+  seoDescription     String?
+  isFeatured         Boolean          @default(false)
+  isBreaking         Boolean          @default(false)
+  breakingExpiresAt  DateTime?
+  pinToCategory      Boolean          @default(false)
+  hideFromHomepage   Boolean          @default(false)
+  scheduledAt        DateTime?
+  publishedAt        DateTime?
+  viewCount          Int              @default(0)
+  readingTimeMinutes Int              @default(1)
+  searchVector       Unsupported("tsvector")?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  deletedAt          DateTime?
+
+  category      Category           @relation(fields: [categoryId], references: [id])
+  author        User               @relation("ArticleAuthor", fields: [authorId], references: [id])
+  authorProfile AuthorProfile?     @relation(fields: [authorProfileId], references: [id])
+  updatedBy     User?              @relation("ArticleUpdatedBy", fields: [updatedById], references: [id])
+  featuredMedia Media?             @relation("ArticleFeatured", fields: [featuredMediaId], references: [id])
+  tags          ArticleTag[]
+  mediaUsages  ArticleMedia[]
+  revisions     ArticleRevision[]
+  stateLogs     ArticleStateLog[]
+  notes         EditorialNote[]
+  homepageSlots HomepageSlot[]
+  previewTokens PreviewToken[]
+  dailyViews    ArticleViewDaily[]
+  campaignItems CampaignArticle[]
+
+  @@unique([slug, language])
+  @@index([status, publishedAt(sort: Desc)])
+  @@index([categoryId, status, publishedAt(sort: Desc)])
+  @@index([authorId, status])
+  @@index([scheduledAt])
+  @@index([isBreaking, breakingExpiresAt])
+  @@index([translationGroupId])
+  @@index([deletedAt])
+}
+
+model ArticleTag {
+  articleId String @db.Uuid
+  tagId     String @db.Uuid
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([articleId, tagId])
+  @@index([tagId])
+}
+
+model ArticleRevision {
+  id        String   @id @default(uuid()) @db.Uuid
+  articleId String   @db.Uuid
+  editorId  String   @db.Uuid
+  snapshot  Json
+  note      String?
+  createdAt DateTime @default(now())
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  editor  User    @relation(fields: [editorId], references: [id])
+
+  @@index([articleId, createdAt(sort: Desc)])
+}
+
+model ArticleStateLog {
+  id           String         @id @default(uuid()) @db.Uuid
+  articleId    String         @db.Uuid
+  fromStatus   ArticleStatus?
+  toStatus     ArticleStatus
+  userId       String         @db.Uuid
+  reason       String?
+  createdAt    DateTime       @default(now())
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@index([articleId, createdAt(sort: Desc)])
+}
+
+model EditorialNote {
+  id        String   @id @default(uuid()) @db.Uuid
+  articleId String   @db.Uuid
+  authorId  String   @db.Uuid
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  author  User    @relation(fields: [authorId], references: [id])
+
+  @@index([articleId, createdAt(sort: Desc)])
+}
+
+model Media {
+  id           String    @id @default(uuid()) @db.Uuid
+  kind         MediaKind @default(IMAGE)
+  originalName String
+  mimeType     String
+  sizeBytes    Int
+  storageKey   String
+  width        Int?
+  height       Int?
+  altText      String?
+  caption      String?
+  credit       String?
+  uploadedById String    @db.Uuid
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  uploadedBy      User            @relation(fields: [uploadedById], references: [id])
+  variants        MediaVariant[]
+  articleFeatured Article[]       @relation("ArticleFeatured")
+  articleUsages   ArticleMedia[]
+  authorPhotos    AuthorProfile[]
+  podcasts        Podcast[]
+
+  @@index([uploadedById, createdAt(sort: Desc)])
+  @@index([kind, createdAt(sort: Desc)])
+}
+
+model MediaVariant {
+  id        String   @id @default(uuid()) @db.Uuid
+  mediaId   String   @db.Uuid
+  label     String
+  width     Int
+  height    Int
+  storageKey String
+  sizeBytes Int
+  createdAt DateTime @default(now())
+
+  media Media @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@unique([mediaId, label])
+}
+
+model ArticleMedia {
+  articleId String @db.Uuid
+  mediaId   String @db.Uuid
+  role      String @default("inline")
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  media   Media   @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+
+  @@id([articleId, mediaId])
+  @@index([mediaId])
+}
+
+model Video {
+  id          String          @id @default(uuid()) @db.Uuid
+  title       String
+  slug        String          @unique
+  description String?         @db.Text
+  provider    String
+  providerId  String
+  categoryId  String?         @db.Uuid
+  language    ContentLanguage @default(en)
+  publishedAt DateTime?
+  status      ArticleStatus   @default(DRAFT)
+  searchVector Unsupported("tsvector")?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  deletedAt   DateTime?
+
+  category Category? @relation(fields: [categoryId], references: [id])
+
+  @@index([status, publishedAt(sort: Desc)])
+}
+
+model Podcast {
+  id            String          @id @default(uuid()) @db.Uuid
+  title         String
+  slug          String          @unique
+  episodeNumber Int?
+  showNotes     String?         @db.Text
+  audioUrl      String?
+  audioMediaId  String?         @db.Uuid
+  categoryId    String?         @db.Uuid
+  language      ContentLanguage @default(en)
+  publishedAt   DateTime?
+  status        ArticleStatus   @default(DRAFT)
+  searchVector  Unsupported("tsvector")?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  deletedAt     DateTime?
+
+  category   Category? @relation(fields: [categoryId], references: [id])
+  audioMedia Media?    @relation(fields: [audioMediaId], references: [id])
+
+  @@index([status, publishedAt(sort: Desc)])
+}
+
+model StaticPage {
+  id        String          @id @default(uuid()) @db.Uuid
+  title     String
+  slug      String          @unique
+  body      Json
+  language  ContentLanguage @default(en)
+  seoTitle  String?
+  seoDescription String?
+  published Boolean         @default(false)
+  updatedAt DateTime        @updatedAt
+  createdAt DateTime        @default(now())
+}
+
+model NavigationItem {
+  id        String   @id @default(uuid()) @db.Uuid
+  labelEn   String
+  labelAm   String?
+  href      String
+  location  String
+  sortOrder Int      @default(0)
+  isExternal Boolean @default(false)
+  parentId  String?  @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  parent   NavigationItem?  @relation("NavTree", fields: [parentId], references: [id])
+  children NavigationItem[] @relation("NavTree")
+
+  @@index([location, sortOrder])
+}
+
+model HomepageSlot {
+  id        String           @id @default(uuid()) @db.Uuid
+  type      HomepageSlotType
+  position  Int
+  articleId String           @db.Uuid
+  updatedAt DateTime         @updatedAt
+  createdAt DateTime         @default(now())
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([type, position])
+  @@index([articleId])
+}
+
+model HomepageCategory {
+  id         String @id @default(uuid()) @db.Uuid
+  categoryId String @db.Uuid
+  position   Int
+
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([position])
+  @@index([categoryId])
+}
+
+model BreakingNewsItem {
+  id        String    @id @default(uuid()) @db.Uuid
+  articleId String    @db.Uuid
+  label     String?
+  position  Int       @default(0)
+  expiresAt DateTime?
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([isActive, expiresAt, position])
+}
+
+model NewsletterSubscriber {
+  id             String           @id @default(uuid()) @db.Uuid
+  email          String           @unique
+  emailNormalized String          @unique
+  name           String?
+  status         SubscriberStatus @default(PENDING)
+  tokenHash      String           @unique
+  confirmedAt    DateTime?
+  unsubscribedAt DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  recipients CampaignRecipient[]
+
+  @@index([status])
+}
+
+model NewsletterCampaign {
+  id            String         @id @default(uuid()) @db.Uuid
+  subject       String
+  bodyHtml      String         @db.Text
+  status        CampaignStatus @default(DRAFT)
+  testSentAt    DateTime?
+  sentAt        DateTime?
+  createdById   String         @db.Uuid
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  createdBy  User                @relation(fields: [createdById], references: [id])
+  articles   CampaignArticle[]
+  recipients CampaignRecipient[]
+}
+
+model CampaignArticle {
+  campaignId String @db.Uuid
+  articleId  String @db.Uuid
+  position   Int    @default(0)
+
+  campaign NewsletterCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  article  Article            @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@id([campaignId, articleId])
+}
+
+model CampaignRecipient {
+  id         String    @id @default(uuid()) @db.Uuid
+  campaignId String    @db.Uuid
+  subscriberId String  @db.Uuid
+  sentAt     DateTime?
+  error      String?
+
+  campaign   NewsletterCampaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  subscriber NewsletterSubscriber @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, subscriberId])
+}
+
+model ContactMessage {
+  id        String        @id @default(uuid()) @db.Uuid
+  name      String
+  email     String
+  subject   String
+  message   String        @db.Text
+  ipAddress String?
+  status    ContactStatus @default(NEW)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([status, createdAt(sort: Desc)])
+}
+
+model AdSlot {
+  id          String    @id @default(uuid()) @db.Uuid
+  key         AdSlotKey @unique
+  name        String
+  description String?
+
+  advertisements Advertisement[]
+}
+
+model Advertisement {
+  id           String    @id @default(uuid()) @db.Uuid
+  slotId       String    @db.Uuid
+  name         String
+  imageUrl     String?
+  destinationUrl String?
+  scriptHtml   String?   @db.Text
+  startsAt     DateTime?
+  endsAt       DateTime?
+  isActive     Boolean   @default(true)
+  clickCount   Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  slot   AdSlot    @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  clicks AdClick[]
+
+  @@index([slotId, isActive, startsAt, endsAt])
+}
+
+model AdClick {
+  id        String   @id @default(uuid()) @db.Uuid
+  adId      String   @db.Uuid
+  ipHash    String?
+  createdAt DateTime @default(now())
+
+  ad Advertisement @relation(fields: [adId], references: [id], onDelete: Cascade)
+
+  @@index([adId, createdAt])
+}
+
+model SiteSetting {
+  id        String   @id @default("default")
+  data      Json
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String?  @db.Uuid
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt(sort: Desc)])
+  @@index([entityType, entityId])
+  @@index([actorId])
+}
+
+model ArticleViewDaily {
+  articleId String   @db.Uuid
+  day       DateTime @db.Date
+  views     Int      @default(0)
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@id([articleId, day])
+  @@index([day, views(sort: Desc)])
+}
+
+model SlugRedirect {
+  id        String   @id @default(uuid()) @db.Uuid
+  fromPath  String   @unique
+  toPath    String
+  createdAt DateTime @default(now())
+
+  @@index([fromPath])
+}
+
+model RateLimitBucket {
+  id        String   @id
+  count     Int      @default(0)
+  windowStart DateTime
+  updatedAt DateTime @updatedAt
+
+  @@index([windowStart])
+}
+
+model PreviewToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  articleId String    @db.Uuid
+  tokenHash String    @unique
+  createdById String  @db.Uuid
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  createdBy User    @relation(fields: [createdById], references: [id])
+
+  @@index([articleId])
+  @@index([expiresAt])
+}
