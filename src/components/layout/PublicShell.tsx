@@ -12,7 +12,13 @@ export async function PublicShell({
   children: React.ReactNode;
 }) {
   const dict = getDictionary(locale);
-  const breaking = await getBreakingNews(locale, 5);
+  let breaking: Awaited<ReturnType<typeof getBreakingNews>> = [];
+  try {
+    breaking = await getBreakingNews(locale, 5);
+  } catch {
+    // Build/deploy can run before tables exist; avoid crashing the shell.
+    breaking = [];
+  }
 
   return (
     <div

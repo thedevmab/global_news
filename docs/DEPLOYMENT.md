@@ -41,11 +41,17 @@ npm run setup:admin
 
 ## 3. Build and run
 
+`npm run build` runs `prisma migrate deploy` then `next build` (required on Vercel/Neon so tables exist before prerender).
+
 ```bash
 npm run build
 npm run start
 # listens on PORT (default 3000)
 ```
+
+### Vercel
+
+Set `DATABASE_URL` (pooled), `DIRECT_URL` (non-pooler), `AUTH_SECRET`, `AUTH_URL`, `NEXT_PUBLIC_SITE_URL`, and `CRON_SECRET` in project env. Build command can stay `npm run build`.
 
 ### systemd example
 
