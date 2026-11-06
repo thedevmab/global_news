@@ -34,6 +34,11 @@ class LocalStorage implements StorageDriver {
   }
 
   async ensureRoot() {
+    if (process.env.VERCEL) {
+      throw new Error(
+        "Local disk uploads are not available on Vercel. Create a Blob store (Storage → Blob) so BLOB_READ_WRITE_TOKEN is set, then redeploy.",
+      );
+    }
     await mkdir(this.root, { recursive: true });
   }
 
@@ -139,12 +144,20 @@ class S3Storage implements StorageDriver {
 let driver: StorageDriver | null = null;
 
 function resolveDriverName(): "local" | "blob" | "s3" {
-  const explicit = process.env.STORAGE_DRIVER;
+  const explicit = (process.env.STORAGE_DRIVER || "").toLowerCase();
+  const onVercel = Boolean(process.env.VERCEL);
+
+  // Vercel filesystem is read-only — never use local disk there, even if
+  // STORAGE_DRIVER=local was copied from .env.example into project env.
+  if (onVercel) {
+    if (explicit === "s3") return "s3";
+    return "blob";
+  }
+
   if (explicit === "blob" || explicit === "s3" || explicit === "local") {
     return explicit;
   }
   if (process.env.BLOB_READ_WRITE_TOKEN) return "blob";
-  if (process.env.VERCEL) return "blob";
   return "local";
 }
 
