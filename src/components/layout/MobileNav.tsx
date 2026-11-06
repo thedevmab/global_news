@@ -85,6 +85,13 @@ export function MobileNav({
                 {dict.nav.about}
               </Link>
               <Link
+                href={localePath(locale, "/contact")}
+                className="rounded px-3 py-2 text-sm hover:bg-white/10"
+                onClick={() => setOpen(false)}
+              >
+                {dict.nav.contact}
+              </Link>
+              <Link
                 href={localePath(locale, "/calendar")}
                 className="rounded px-3 py-2 text-sm hover:bg-white/10"
                 onClick={() => setOpen(false)}
@@ -111,13 +118,6 @@ export function MobileNav({
                 onClick={() => setOpen(false)}
               >
                 {dict.nav.search}
-              </Link>
-              <Link
-                href={localePath(locale, "/contact")}
-                className="rounded px-3 py-2 text-sm hover:bg-white/10"
-                onClick={() => setOpen(false)}
-              >
-                {dict.nav.contact}
               </Link>
             </nav>
             <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-4">

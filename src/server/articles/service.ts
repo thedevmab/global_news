@@ -18,18 +18,18 @@ import {
   type ArticleCreateInput,
   type ArticleUpdateInput,
 } from "@/lib/validation/article";
-import { readingTimeMinutes, slugify } from "@/lib/utils";
+import { excerpt, readingTimeMinutes, slugify } from "@/lib/utils";
 import { extractTipTapText, EMPTY_DOC } from "@/lib/tiptap-text";
 import { generateToken, hashToken } from "@/lib/security/tokens";
 import { transitionArticleStatus } from "@/server/articles/workflow";
 import { writeAudit } from "@/server/audit";
 
 async function ensureUniqueSlug(
-  slug: string,
+  slugSource: string,
   language: ContentLanguage,
   excludeId?: string,
 ): Promise<{ slug: string; suggestions: string[] }> {
-  const base = slugify(slug) || "article";
+  const base = slugify(slugSource) || "article";
   const suggestions: string[] = [];
   let candidate = base;
   for (let i = 0; i < 8; i++) {
@@ -53,6 +53,30 @@ async function ensureUniqueSlug(
   throw new ValidationError("Could not generate a unique slug", {
     suggestions,
   });
+}
+
+function buildSummary(bodyText: string, headline: string): string {
+  const source = bodyText.trim() || headline.trim();
+  return excerpt(source, 300) || headline.slice(0, 300);
+}
+
+async function resolveCategoryId(categoryId?: string | null): Promise<string> {
+  if (categoryId) {
+    const found = await prisma.category.findFirst({
+      where: { id: categoryId, isActive: true },
+      select: { id: true },
+    });
+    if (found) return found.id;
+  }
+  const fallback = await prisma.category.findFirst({
+    where: { isActive: true },
+    orderBy: { sortOrder: "asc" },
+    select: { id: true },
+  });
+  if (!fallback) {
+    throw new ValidationError("No active category available");
+  }
+  return fallback.id;
 }
 
 function snapshotArticle(article: Record<string, unknown>): Prisma.InputJsonValue {
@@ -82,22 +106,26 @@ function snapshotArticle(article: Record<string, unknown>): Prisma.InputJsonValu
 export async function createArticle(user: AuthUser, input: unknown) {
   requirePermission(user, "article:create");
   const data: ArticleCreateInput = articleCreateSchema.parse(input);
-  const { slug } = await ensureUniqueSlug(data.slug, data.language);
-
   const text = extractTipTapText(data.body);
+  const { slug } = await ensureUniqueSlug(data.headline, data.language);
+  const categoryId = await resolveCategoryId(
+    data.categoryId && data.categoryId !== "" ? data.categoryId : null,
+  );
+  const summary = buildSummary(text, data.headline);
+
   const article = await prisma.$transaction(async (tx) => {
     const created = await tx.article.create({
       data: {
         headline: data.headline,
-        subheadline: data.subheadline ?? null,
+        subheadline: null,
         slug,
-        summary: data.summary,
+        summary,
         body: data.body as Prisma.InputJsonValue,
-        categoryId: data.categoryId,
+        categoryId,
         language: data.language,
         authorId: user.id,
         authorProfileId: data.authorProfileId ?? null,
-        featuredMediaId: data.featuredMediaId ?? null,
+        featuredMediaId: data.featuredMediaId,
         seoTitle: data.seoTitle ?? null,
         seoDescription: data.seoDescription ?? null,
         updatedById: user.id,
@@ -158,18 +186,40 @@ export async function updateArticle(
     requirePermission(user, "article:manage_breaking");
   }
 
-  let slug = data.slug;
-  if (slug && slug !== existing.slug) {
-    const unique = await ensureUniqueSlug(
-      slug,
-      data.language ?? existing.language,
-      id,
-    );
-    slug = unique.slug;
+  const nextFeatured =
+    data.featuredMediaId !== undefined
+      ? data.featuredMediaId
+      : existing.featuredMediaId;
+  if (!nextFeatured) {
+    throw new ValidationError("Featured image is required");
   }
 
+  const headline = data.headline ?? existing.headline;
+  const language = data.language ?? existing.language;
   const body = data.body ?? (existing.body as { type: "doc" });
   const text = extractTipTapText(body);
+  if (!text || text.length < 3) {
+    throw new ValidationError("Article body is required");
+  }
+
+  let nextSlug = existing.slug;
+  if (
+    existing.status === "DRAFT" &&
+    data.headline !== undefined &&
+    data.headline !== existing.headline
+  ) {
+    const unique = await ensureUniqueSlug(headline, language, id);
+    nextSlug = unique.slug;
+  }
+
+  let nextCategoryId = existing.categoryId;
+  if (data.categoryId !== undefined) {
+    nextCategoryId = await resolveCategoryId(
+      data.categoryId !== "" ? data.categoryId : null,
+    );
+  }
+
+  const summary = buildSummary(text, headline);
 
   const updated = await prisma.$transaction(async (tx) => {
     if (data.tagIds) {
@@ -184,22 +234,14 @@ export async function updateArticle(
     const article = await tx.article.update({
       where: { id },
       data: {
-        ...(data.headline !== undefined ? { headline: data.headline } : {}),
-        ...(data.subheadline !== undefined
-          ? { subheadline: data.subheadline }
-          : {}),
-        ...(slug !== undefined ? { slug } : {}),
-        ...(data.summary !== undefined ? { summary: data.summary } : {}),
-        ...(data.body !== undefined
-          ? { body: data.body as Prisma.InputJsonValue }
-          : {}),
-        ...(data.categoryId !== undefined
-          ? { categoryId: data.categoryId }
-          : {}),
-        ...(data.language !== undefined ? { language: data.language } : {}),
-        ...(data.featuredMediaId !== undefined
-          ? { featuredMediaId: data.featuredMediaId }
-          : {}),
+        headline,
+        subheadline: null,
+        slug: nextSlug,
+        summary,
+        body: body as Prisma.InputJsonValue,
+        categoryId: nextCategoryId,
+        language,
+        featuredMediaId: nextFeatured,
         ...(data.seoTitle !== undefined ? { seoTitle: data.seoTitle } : {}),
         ...(data.seoDescription !== undefined
           ? { seoDescription: data.seoDescription }

@@ -226,7 +226,7 @@ export async function homepageUpdateAction(input: unknown): Promise<ActionResult
   try {
     const user = await requireUser();
     await updateHomepageLayout(user, input);
-    revalidateMany("/admin/homepage");
+    revalidateMany("/admin/homepage", "/", "/am");
     return ok(undefined);
   } catch (err) {
     return toActionError(err);
@@ -348,7 +348,7 @@ export async function adCreateAction(input: unknown): Promise<ActionResult> {
   try {
     const user = await requireUser();
     await createAdvertisement(user, input);
-    revalidateMany("/admin/advertisements");
+    revalidateMany("/admin/advertisements", "/", "/am");
     return ok(undefined);
   } catch (err) {
     return toActionError(err);
@@ -362,7 +362,7 @@ export async function adUpdateAction(
   try {
     const user = await requireUser();
     await updateAdvertisement(user, id, input);
-    revalidateMany("/admin/advertisements");
+    revalidateMany("/admin/advertisements", "/", "/am");
     return ok(undefined);
   } catch (err) {
     return toActionError(err);
@@ -373,7 +373,7 @@ export async function adDeleteAction(id: string): Promise<ActionResult> {
   try {
     const user = await requireUser();
     await deleteAdvertisement(user, id);
-    revalidateMany("/admin/advertisements");
+    revalidateMany("/admin/advertisements", "/", "/am");
     return ok(undefined);
   } catch (err) {
     return toActionError(err);

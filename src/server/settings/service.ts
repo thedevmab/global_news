@@ -11,7 +11,9 @@ export const siteSettingsSchema = z.object({
   socialLinks: z
     .object({
       facebook: z.string().optional().default(""),
+      tiktok: z.string().optional().default(""),
       x: z.string().optional().default(""),
+      instagram: z.string().optional().default(""),
       youtube: z.string().optional().default(""),
       telegram: z.string().optional().default(""),
       linkedin: z.string().optional().default(""),

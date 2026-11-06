@@ -3,7 +3,10 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { Play } from "lucide-react";
 import { ArticleCard } from "@/components/article/ArticleCard";
+import { HomeHero } from "@/components/home/HomeHero";
 import { LoadMoreArticles } from "@/components/home/LoadMoreArticles";
+import { RecentNewsTicker } from "@/components/home/RecentNewsTicker";
+import { TopStoriesBand } from "@/components/home/TopStoriesBand";
 import { NewsletterForm } from "@/components/forms/NewsletterForm";
 import { AdSlot } from "@/components/media/AdSlot";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -22,6 +25,7 @@ import {
   listLatestArticles,
   listPublishedPodcasts,
   listPublishedVideos,
+  listRecentHeadlines,
 } from "@/server/articles/public";
 import type { ArticleCardData } from "@/server/articles/public";
 
@@ -46,14 +50,20 @@ function SectionHeading({
   label: string;
 }) {
   return (
-    <div className="mb-4 flex items-baseline justify-between gap-3">
-      <h2 id={id} className="text-xl font-bold tracking-tight text-foreground">
-        {title}
-      </h2>
+    <div className="mb-5 flex items-end justify-between gap-3 border-b border-border pb-3">
+      <div>
+        <span aria-hidden className="mb-2 block h-0.5 w-8 bg-gvn-red" />
+        <h2
+          id={id}
+          className="text-xl font-bold tracking-tight text-gvn-navy dark:text-white"
+        >
+          {title}
+        </h2>
+      </div>
       {href ? (
         <Link
           href={href}
-          className="shrink-0 text-xs font-medium text-muted-foreground hover:text-gvn-red"
+          className="shrink-0 pb-0.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-gvn-red"
         >
           {label}
         </Link>
@@ -67,6 +77,7 @@ export async function HomePage({ locale }: { locale: Locale }) {
   const [
     { lead, secondary },
     latest,
+    recentHeadlines,
     sections,
     videos,
     channelVideos,
@@ -74,8 +85,11 @@ export async function HomePage({ locale }: { locale: Locale }) {
     settingsRow,
     categories,
   ] = await Promise.all([
-    getHomepageLeadAndSecondary(locale),
-    listLatestArticles({ page: 1, pageSize: LATEST_PAGE_SIZE, language: locale }),
+    // Homepage surfaces all published languages so Amharic/English posts from
+    // the dashboard both appear on / and /am (category pages stay locale-scoped).
+    getHomepageLeadAndSecondary(),
+    listLatestArticles({ page: 1, pageSize: LATEST_PAGE_SIZE }),
+    listRecentHeadlines({ hours: 12, limit: 20 }),
     getHomepageCategorySections(locale, 1),
     listPublishedVideos({ page: 1, pageSize: 1, language: locale }),
     getChannelVideos().catch(() => []),
@@ -182,47 +196,33 @@ export async function HomePage({ locale }: { locale: Locale }) {
   return (
     <div>
       <h1 className="sr-only">{dict.siteName}</h1>
-      <div className="mx-auto max-w-7xl space-y-12 px-4 py-6 md:py-8">
-        <AdSlot slotKey="HEADER" />
 
-        {heroLead ? (
-          <section
-            aria-label="Featured"
-            className={cn(
-              "grid items-start gap-6",
-              heroRail.length > 0 &&
-                "lg:grid-cols-[minmax(0,1.55fr)_minmax(280px,1fr)]",
-            )}
-          >
-            <ArticleCard article={heroLead} locale={locale} variant="lead" />
-            {heroRail.length > 0 ? (
-              <div className="flex w-full flex-col justify-start">
-                <p className="mb-3 text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                  {dict.home.topStories}
-                </p>
-                <div className="divide-y divide-border border-y border-border">
-                  {heroRail.map((article) => (
-                    <div key={article.id} className="py-3.5">
-                      <ArticleCard
-                        article={article}
-                        locale={locale}
-                        variant="horizontal"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-          </section>
-        ) : null}
+      <RecentNewsTicker
+        locale={locale}
+        label={dict.home.justIn}
+        items={recentHeadlines.map((article) => ({
+          id: article.id,
+          headline: article.headline,
+          slug: article.slug,
+          categorySlug: article.category.slug,
+        }))}
+      />
+
+      {heroLead ? <HomeHero article={heroLead} locale={locale} /> : null}
+      {heroRail.length > 0 ? (
+        <TopStoriesBand articles={heroRail} locale={locale} />
+      ) : null}
+
+      <div className="mx-auto max-w-7xl space-y-12 px-4 py-8 md:py-10">
+        <AdSlot slotKey="MIDDLE" />
 
         {latestRows.length > 0 || tiles.length > 0 ? (
           <section
             className={cn(
-              "grid items-start gap-10",
+              "grid items-start gap-10 md:gap-12",
               latestRows.length > 0 &&
                 tiles.length > 0 &&
-                "lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]",
+                "lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]",
             )}
           >
             {latestRows.length > 0 ? (
@@ -233,9 +233,9 @@ export async function HomePage({ locale }: { locale: Locale }) {
                   href={localePath(locale, "/search")}
                   label={dict.home.viewAll}
                 />
-                <div className="divide-y divide-border border-y border-border">
+                <div className="divide-y divide-border">
                   {latestRows.map((article) => (
-                    <div key={article.id} className="py-4">
+                    <div key={article.id} className="py-4 first:pt-1">
                       <ArticleCard
                         article={article}
                         locale={locale}
@@ -276,22 +276,19 @@ export async function HomePage({ locale }: { locale: Locale }) {
                         src={tile.image || editorialFallback(index)}
                         alt=""
                         fill
-                        className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                        className="object-cover transition-transform duration-700 group-hover:scale-[1.06]"
                         sizes="(max-width: 768px) 45vw, 220px"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-black/10" />
-                      {!tile.image && tile.color ? (
-                        <span
-                          aria-hidden
-                          className="absolute inset-x-0 top-0 h-1"
-                          style={{ backgroundColor: tile.color }}
-                        />
-                      ) : null}
+                      <div className="absolute inset-0 bg-gradient-to-t from-gvn-deep-navy/90 via-gvn-navy/30 to-transparent" />
+                      <span
+                        aria-hidden
+                        className="absolute inset-x-0 top-0 h-[2px] bg-gvn-red opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                      />
                       <span className="absolute inset-x-0 bottom-0 p-3">
                         <span className="block text-sm font-semibold text-white">
                           {tile.name}
                         </span>
-                        <span className="mt-0.5 line-clamp-1 block text-[11px] text-white/80">
+                        <span className="mt-0.5 line-clamp-1 block text-[11px] text-white/75">
                           {tile.description}
                         </span>
                       </span>
@@ -310,31 +307,32 @@ export async function HomePage({ locale }: { locale: Locale }) {
             src={editorial.globe}
             alt=""
             fill
-            className="object-cover object-right"
+            className="object-cover object-right opacity-90"
             sizes="100vw"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-gvn-navy via-gvn-navy/92 to-gvn-navy/25" />
+          <div className="absolute inset-0 bg-gradient-to-r from-gvn-deep-navy via-gvn-navy/95 to-gvn-navy/30" />
         </div>
-        <div className="relative mx-auto flex max-w-7xl flex-col gap-5 px-4 py-10 sm:flex-row sm:items-center md:py-12">
+        <div className="relative mx-auto flex max-w-7xl flex-col gap-6 px-4 py-12 sm:flex-row sm:items-center sm:gap-10 md:py-14">
           <Image
             src="/brand/gvn-logo-mark.png"
             alt=""
-            width={144}
-            height={51}
-            className="h-14 w-auto shrink-0"
+            width={160}
+            height={56}
+            className="h-14 w-auto shrink-0 md:h-16"
           />
           <div className="max-w-xl">
+            <span aria-hidden className="mb-3 block h-0.5 w-10 bg-gvn-red" />
             <h2 className="font-serif text-2xl font-semibold leading-tight md:text-3xl">
               {dict.home.promoTitle}
             </h2>
-            <p className="mt-2 text-sm text-white/80">
+            <p className="mt-2 text-sm text-white/80 md:text-base">
               {locale === "en" && settings.tagline
                 ? settings.tagline
                 : dict.home.promoText}
             </p>
             <a
               href="#newsletter"
-              className="mt-5 inline-flex h-10 items-center justify-center bg-gvn-red px-5 text-sm font-semibold text-white hover:bg-red-600 focus-visible:!outline-white"
+              className="mt-6 inline-flex h-11 items-center justify-center bg-gvn-red px-6 text-sm font-semibold text-white transition-colors hover:bg-[#c92f3b] focus-visible:!outline-white"
             >
               {dict.home.promoCta}
             </a>
@@ -346,10 +344,11 @@ export async function HomePage({ locale }: { locale: Locale }) {
         {mediaColumns === 0 ? (
           <section
             id="newsletter"
-            className="scroll-mt-24 flex w-full flex-col gap-6 rounded-md border border-border bg-card p-6 shadow-sm md:flex-row md:items-center md:justify-between md:gap-10 md:p-8"
+            className="scroll-mt-24 flex w-full flex-col gap-6 border border-border bg-gvn-light-gray/60 p-6 dark:bg-muted/40 md:flex-row md:items-center md:justify-between md:gap-10 md:p-8"
           >
             <div className="max-w-md">
-              <h2 className="text-xl font-bold tracking-tight text-foreground">
+              <span aria-hidden className="mb-2 block h-0.5 w-8 bg-gvn-red" />
+              <h2 className="text-xl font-bold tracking-tight text-gvn-navy dark:text-white">
                 {dict.home.newsletterCardTitle}
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -361,125 +360,132 @@ export async function HomePage({ locale }: { locale: Locale }) {
             </div>
           </section>
         ) : (
-        <section
-          className={cn(
-            "grid items-start gap-8",
-            mediaColumns === 2 && "lg:grid-cols-3",
-            mediaColumns === 1 && "lg:grid-cols-2",
-          )}
-        >
-          {channelVideo || archiveVideo ? (
-            <div>
-              <SectionHeading
-                id="videos-heading"
-                title={dict.home.featuredVideos}
-                href={localePath(locale, "/videos")}
-                label={dict.home.viewAll}
-              />
-              <Link
-                href={localePath(
-                  locale,
-                  `/videos/${channelVideo ? channelVideo.id : archiveVideo!.slug}`,
-                )}
-                className="group block"
-              >
-                <span className="relative block aspect-video overflow-hidden bg-gvn-navy">
-                  <Image
-                    src={channelVideo ? channelVideo.thumbnailUrl : editorial.city}
-                    alt=""
-                    fill
-                    className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                    sizes="(max-width: 1024px) 100vw, 360px"
-                  />
-                  <span className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
-                  <span className="absolute bottom-3 left-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/92 text-gvn-navy shadow-sm">
-                    <Play className="h-4 w-4 fill-current" aria-hidden />
-                  </span>
-                </span>
-                <span className="mt-3 block text-sm font-semibold leading-snug group-hover:text-gvn-red">
-                  {channelVideo ? channelVideo.title : archiveVideo!.title}
-                </span>
-                {(channelVideo?.publishedAt || archiveVideo?.publishedAt) ? (
-                  <time
-                    dateTime={
-                      channelVideo
-                        ? channelVideo.publishedAt
-                        : archiveVideo!.publishedAt!.toISOString()
-                    }
-                    className="mt-1 block text-xs text-muted-foreground"
-                  >
-                    {format(
-                      channelVideo
-                        ? new Date(channelVideo.publishedAt)
-                        : archiveVideo!.publishedAt!,
-                      "MMM d, yyyy",
-                    )}
-                  </time>
-                ) : null}
-              </Link>
-            </div>
-          ) : null}
-
-          {podcasts.items.length > 0 ? (
-            <div>
-              <SectionHeading
-                id="podcasts-heading"
-                title={dict.home.featuredPodcasts}
-                href={localePath(locale, "/podcasts")}
-                label={dict.home.viewAll}
-              />
-              <ul className="divide-y divide-border rounded-md border border-border bg-card">
-                {podcasts.items.map((podcast) => (
-                  <li key={podcast.id}>
-                    <Link
-                      href={localePath(locale, `/podcasts/${podcast.slug}`)}
-                      className="flex items-center gap-3 px-3 py-3 hover:bg-muted/70"
-                    >
-                      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-gvn-navy dark:text-white">
-                        <Play className="h-3.5 w-3.5 fill-current" aria-hidden />
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-semibold">
-                          {podcast.title}
-                        </span>
-                        <span className="mt-0.5 block text-xs text-muted-foreground">
-                          {podcast.episodeNumber != null
-                            ? locale === "am"
-                              ? `ክፍል ${podcast.episodeNumber}`
-                              : `Episode ${podcast.episodeNumber}`
-                            : dict.nav.podcasts}
-                          {podcast.publishedAt
-                            ? ` · ${format(podcast.publishedAt, "MMM d, yyyy")}`
-                            : ""}
-                        </span>
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-          <div
-            id="newsletter"
-            className="scroll-mt-24 rounded-md border border-border bg-card p-5 shadow-sm"
+          <section
+            className={cn(
+              "grid items-start gap-8 md:gap-10",
+              mediaColumns === 2 && "lg:grid-cols-3",
+              mediaColumns === 1 && "lg:grid-cols-2",
+            )}
           >
-            <h2 className="text-base font-bold tracking-tight text-foreground">
-              {dict.home.newsletterCardTitle}
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {dict.home.newsletterCardText}
-            </p>
-            <div className="mt-4">
-              <NewsletterForm dict={dict} variant="stacked" />
+            {channelVideo || archiveVideo ? (
+              <div>
+                <SectionHeading
+                  id="videos-heading"
+                  title={dict.home.featuredVideos}
+                  href={localePath(locale, "/videos")}
+                  label={dict.home.viewAll}
+                />
+                <Link
+                  href={localePath(
+                    locale,
+                    `/videos/${channelVideo ? channelVideo.id : archiveVideo!.slug}`,
+                  )}
+                  className="group block"
+                >
+                  <span className="relative block aspect-video overflow-hidden bg-gvn-navy">
+                    <Image
+                      src={
+                        channelVideo ? channelVideo.thumbnailUrl : editorial.city
+                      }
+                      alt=""
+                      fill
+                      className="object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+                      sizes="(max-width: 1024px) 100vw, 360px"
+                    />
+                    <span className="absolute inset-0 bg-gradient-to-t from-gvn-deep-navy/55 via-transparent to-transparent" />
+                    <span className="absolute bottom-3 left-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-gvn-navy">
+                      <Play className="h-4 w-4 fill-current" aria-hidden />
+                    </span>
+                  </span>
+                  <span className="mt-3 block text-sm font-semibold leading-snug text-foreground group-hover:text-gvn-red">
+                    {channelVideo ? channelVideo.title : archiveVideo!.title}
+                  </span>
+                  {channelVideo?.publishedAt || archiveVideo?.publishedAt ? (
+                    <time
+                      dateTime={
+                        channelVideo
+                          ? channelVideo.publishedAt
+                          : archiveVideo!.publishedAt!.toISOString()
+                      }
+                      className="mt-1 block text-xs text-muted-foreground"
+                    >
+                      {format(
+                        channelVideo
+                          ? new Date(channelVideo.publishedAt)
+                          : archiveVideo!.publishedAt!,
+                        "MMM d, yyyy",
+                      )}
+                    </time>
+                  ) : null}
+                </Link>
+              </div>
+            ) : null}
+
+            {podcasts.items.length > 0 ? (
+              <div>
+                <SectionHeading
+                  id="podcasts-heading"
+                  title={dict.home.featuredPodcasts}
+                  href={localePath(locale, "/podcasts")}
+                  label={dict.home.viewAll}
+                />
+                <ul className="divide-y divide-border border-y border-border">
+                  {podcasts.items.map((podcast) => (
+                    <li key={podcast.id}>
+                      <Link
+                        href={localePath(locale, `/podcasts/${podcast.slug}`)}
+                        className="flex items-center gap-3 py-3.5 hover:text-gvn-red"
+                      >
+                        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center border border-gvn-navy/20 text-gvn-navy dark:border-white/20 dark:text-white">
+                          <Play
+                            className="h-3.5 w-3.5 fill-current"
+                            aria-hidden
+                          />
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-semibold">
+                            {podcast.title}
+                          </span>
+                          <span className="mt-0.5 block text-xs text-muted-foreground">
+                            {podcast.episodeNumber != null
+                              ? locale === "am"
+                                ? `ክፍል ${podcast.episodeNumber}`
+                                : `Episode ${podcast.episodeNumber}`
+                              : dict.nav.podcasts}
+                            {podcast.publishedAt
+                              ? ` · ${format(podcast.publishedAt, "MMM d, yyyy")}`
+                              : ""}
+                          </span>
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            <div
+              id="newsletter"
+              className="scroll-mt-24 border border-border bg-gvn-navy p-5 text-white md:p-6"
+            >
+              <span aria-hidden className="mb-3 block h-0.5 w-8 bg-gvn-red" />
+              <h2 className="text-base font-bold tracking-tight">
+                {dict.home.newsletterCardTitle}
+              </h2>
+              <p className="mt-1 text-sm text-white/75">
+                {dict.home.newsletterCardText}
+              </p>
+              <div className="mt-4">
+                <NewsletterForm
+                  dict={dict}
+                  variant="stacked"
+                  tone="onDark"
+                />
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
         )}
 
-        <div className="mt-10">
-          <AdSlot slotKey="FOOTER" />
-        </div>
       </div>
     </div>
   );

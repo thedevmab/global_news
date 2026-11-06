@@ -73,6 +73,7 @@ enum ContactStatus {
 
 enum AdSlotKey {
   HEADER
+  MIDDLE
   SIDEBAR
   IN_ARTICLE
   FOOTER

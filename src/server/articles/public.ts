@@ -419,6 +419,35 @@ export async function getBreakingNews(language?: Lang, limit = 5) {
   });
 }
 
+/** Published article titles from the last `hours` (default 12). Homepage ticker. */
+export async function listRecentHeadlines(opts?: {
+  hours?: number;
+  limit?: number;
+  language?: Lang;
+}) {
+  const hours = Math.max(1, opts?.hours ?? 12);
+  const limit = Math.min(40, Math.max(1, opts?.limit ?? 20));
+  const now = new Date();
+  const since = new Date(now.getTime() - hours * 60 * 60 * 1000);
+
+  return prisma.article.findMany({
+    where: {
+      ...publishedWhere(opts?.language),
+      hideFromHomepage: false,
+      publishedAt: { gte: since, lte: now },
+    },
+    select: {
+      id: true,
+      headline: true,
+      slug: true,
+      publishedAt: true,
+      category: { select: { slug: true } },
+    },
+    orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
+    take: limit,
+  });
+}
+
 export async function getHomepageLeadAndSecondary(language?: Lang) {
   const slots = await prisma.homepageSlot.findMany({
     orderBy: [{ type: "asc" }, { position: "asc" }],

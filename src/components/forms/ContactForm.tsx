@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +9,7 @@ import { getDictionary, type Locale } from "@/i18n";
 
 export function ContactForm({ locale }: { locale: Locale }) {
   const dict = getDictionary(locale);
+  const formRef = useRef<HTMLFormElement>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "ok" | "error">(
     "idle",
   );
@@ -16,8 +17,11 @@ export function ContactForm({ locale }: { locale: Locale }) {
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const formEl = formRef.current;
+    if (!formEl) return;
+    const form = new FormData(formEl);
     setStatus("loading");
-    const form = new FormData(e.currentTarget);
+    setMessage("");
     try {
       const res = await fetch("/api/contact", {
         method: "POST",
@@ -30,11 +34,11 @@ export function ContactForm({ locale }: { locale: Locale }) {
           website: form.get("website") || "",
         }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Failed");
+      formEl.reset();
       setStatus("ok");
       setMessage(dict.contact.success);
-      e.currentTarget.reset();
     } catch (err) {
       setStatus("error");
       setMessage(err instanceof Error ? err.message : "Failed to send");
@@ -42,7 +46,7 @@ export function ContactForm({ locale }: { locale: Locale }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form ref={formRef} onSubmit={onSubmit} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="name">{dict.contact.name}</Label>
         <Input id="name" name="name" required />
@@ -72,7 +76,7 @@ export function ContactForm({ locale }: { locale: Locale }) {
       </Button>
       {message ? (
         <p
-          className={`text-sm ${status === "error" ? "text-gvn-red" : "text-emerald-700"}`}
+          className={`text-sm ${status === "error" ? "text-gvn-red" : "text-emerald-700 dark:text-emerald-400"}`}
           role="status"
         >
           {message}

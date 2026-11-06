@@ -1,6 +1,8 @@
 import { Header } from "./Header";
 import { Footer } from "./Footer";
 import { BreakingTicker } from "./BreakingTicker";
+import { SiteDateTimeBar } from "./SiteDateTimeBar";
+import { AdSlot } from "@/components/media/AdSlot";
 import { getBreakingNews } from "@/server/articles/public";
 import { getDictionary, type Locale } from "@/i18n";
 
@@ -25,6 +27,7 @@ export async function PublicShell({
       className={locale === "am" ? "lang-am flex min-h-full flex-col" : "flex min-h-full flex-col"}
       lang={locale}
     >
+      <SiteDateTimeBar locale={locale} />
       <BreakingTicker
         locale={locale}
         dict={dict}
@@ -36,7 +39,9 @@ export async function PublicShell({
         }))}
       />
       <Header locale={locale} />
+      <AdSlot slotKey="HEADER" className="mx-auto max-w-7xl px-4 py-3" />
       <main className="flex-1">{children}</main>
+      <AdSlot slotKey="FOOTER" className="mx-auto max-w-7xl px-4 py-3" />
       <Footer locale={locale} />
     </div>
   );

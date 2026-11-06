@@ -61,6 +61,11 @@ export async function autosaveArticleAction(
   }
 }
 
+function revalidatePublicHome() {
+  revalidatePath("/");
+  revalidatePath("/am");
+}
+
 export async function transitionArticleAction(
   input: unknown,
 ): Promise<ActionResult<{ status: ArticleStatus }>> {
@@ -69,6 +74,14 @@ export async function transitionArticleAction(
     const article = await transitionArticle(user, input);
     revalidatePath("/admin/articles");
     revalidatePath(`/admin/articles/${article.id}/edit`);
+    if (
+      article.status === "PUBLISHED" ||
+      article.status === "DRAFT" ||
+      article.status === "ARCHIVED" ||
+      article.status === "TRASH"
+    ) {
+      revalidatePublicHome();
+    }
     return ok({ status: article.status });
   } catch (err) {
     return toActionError(err);
@@ -94,6 +107,7 @@ export async function bulkArticlesAction(input: unknown): Promise<
       data.reason,
     );
     revalidatePath("/admin/articles");
+    revalidatePublicHome();
     return ok({ count: results.length });
   } catch (err) {
     return toActionError(err);

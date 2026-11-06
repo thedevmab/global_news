@@ -1,14 +1,67 @@
+import { AdSlotKey } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requirePermission, type AuthUser } from "@/lib/rbac";
 import { NotFoundError } from "@/lib/errors";
 import { writeAudit } from "@/server/audit";
 import { z } from "zod";
 
+const PRIMARY_SLOT_META: { key: AdSlotKey; name: string; description: string }[] =
+  [
+    {
+      key: "HEADER",
+      name: "Below header",
+      description: "Banner shown directly under the site header",
+    },
+    {
+      key: "MIDDLE",
+      name: "Middle of page",
+      description: "Banner shown in the middle of home and article pages",
+    },
+    {
+      key: "FOOTER",
+      name: "Above footer",
+      description: "Banner shown above the site footer",
+    },
+  ];
+
+export async function ensurePrimaryAdSlots() {
+  for (const slot of PRIMARY_SLOT_META) {
+    await prisma.adSlot.upsert({
+      where: { key: slot.key },
+      update: { name: slot.name, description: slot.description },
+      create: slot,
+    });
+  }
+}
+
+const mediaOrUrl = z
+  .string()
+  .trim()
+  .refine(
+    (value) =>
+      value === "" ||
+      value.startsWith("/") ||
+      /^https?:\/\//i.test(value),
+    { message: "Image must be a URL or /media path" },
+  );
+
 const adSchema = z.object({
   slotId: z.string().uuid(),
   name: z.string().min(1).max(120),
-  imageUrl: z.string().url().optional().nullable().or(z.literal("")),
-  destinationUrl: z.string().url().optional().nullable().or(z.literal("")),
+  imageUrl: mediaOrUrl.optional().nullable().or(z.literal("")),
+  destinationUrl: z
+    .string()
+    .trim()
+    .refine(
+      (value) =>
+        value === "" ||
+        value.startsWith("/") ||
+        /^https?:\/\//i.test(value),
+      { message: "Destination must be a URL or site path" },
+    )
+    .optional()
+    .nullable()
+    .or(z.literal("")),
   scriptHtml: z.string().max(10000).optional().nullable(),
   startsAt: z.coerce.date().optional().nullable(),
   endsAt: z.coerce.date().optional().nullable(),

@@ -75,9 +75,16 @@ describe("rbac workflow transitions", () => {
     expect(WORKFLOW_TRANSITIONS.APPROVED).toContain("SCHEDULED");
   });
 
-  it("rejects invalid transitions", () => {
+  it("allows draft → published in the transition matrix", () => {
+    expect(WORKFLOW_TRANSITIONS.DRAFT).toContain("PUBLISHED");
     expect(() =>
       assertValidWorkflowTransition("DRAFT", "PUBLISHED"),
+    ).not.toThrow();
+  });
+
+  it("rejects invalid transitions", () => {
+    expect(() =>
+      assertValidWorkflowTransition("DRAFT", "ARCHIVED"),
     ).toThrow(ForbiddenError);
   });
 

@@ -17,6 +17,7 @@ export const am: Dictionary = {
   },
   home: {
     breaking: "አስቸኳይ ዜና",
+    justIn: "አዲስ",
     latest: "አዳዲስ ዜናዎች",
     viewAll: "ሁሉንም ይመልከቱ",
     loadMore: "ተጨማሪ አሳይ",
@@ -35,6 +36,7 @@ export const am: Dictionary = {
     newsletterCardText: "ለዜና መጽሔታችን ይመዝገቡ እና አንድም ዜና አያምልጥዎ።",
     stayUpdated: "መረጃ ይቀበሉ",
     topStories: "ዋና ዜናዎች",
+    readStory: "ታሪኩን ያንብቡ",
   },
   article: {
     by: "በ",
@@ -63,12 +65,16 @@ export const am: Dictionary = {
   },
   contact: {
     title: "ያግኙን",
+    intro:
+      "ለግሎባል ቮይስ ኔትወርክ ዜና ክፍል ይጻፉ። እያንዳንዱን መልእክት እናነባለን፤ በምንችለው ጊዜ እንመልሳለን።",
     name: "ስም",
     email: "ኢሜይል",
     subject: "ርዕስ",
     message: "መልእክት",
     submit: "መልእክት ላክ",
     success: "መልእክትዎ ተልኳል።",
+    socialTitle: "የGVN ማኀበራዊ ሚዲያ ገፆች",
+    socialIntro: "ግሎባል ቮይስ ኔትወርክን በይፋዊ ገፆቻችን ይከተሉ።",
   },
   footer: {
     rights: "መብቱ በህግ የተጠበቀ ነው።",
@@ -143,6 +149,8 @@ export const am: Dictionary = {
     closeText: "አጭሩ መግለጫ ያወጣነው ዘገባ ሲሆን ይላካል።",
     contactCta: "ለዜና ክፍሉ ይጻፉ",
     videosCta: "የቪዲዮ ዜና",
+    socialTitle: "GVN በማኀበራዊ ሚዲያ",
+    socialIntro: "ዜና ክፍሉን በይፋዊ ገፆቻችን ይከተሉ።",
   },
   sportsPage: {
     newsTab: "ዜና",

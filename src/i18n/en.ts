@@ -15,6 +15,7 @@ export const en = {
   },
   home: {
     breaking: "Breaking News",
+    justIn: "Just in",
     latest: "Latest News",
     viewAll: "View all",
     loadMore: "Load more",
@@ -35,6 +36,7 @@ export const en = {
       "Subscribe to our newsletter and never miss an update.",
     stayUpdated: "Stay Updated",
     topStories: "Top Stories",
+    readStory: "Read story",
   },
   article: {
     by: "By",
@@ -63,12 +65,16 @@ export const en = {
   },
   contact: {
     title: "Contact us",
+    intro:
+      "Write to the Global Voice Network newsroom. We read every message and reply when we can.",
     name: "Name",
     email: "Email",
     subject: "Subject",
     message: "Message",
     submit: "Send message",
     success: "Your message has been sent.",
+    socialTitle: "GVN social media",
+    socialIntro: "Follow Global Voice Network on our official channels.",
   },
   footer: {
     rights: "All rights reserved.",
@@ -143,6 +149,8 @@ export const en = {
     closeText: "The briefing is the same journalism, sent when we publish.",
     contactCta: "Write to the newsroom",
     videosCta: "Video news",
+    socialTitle: "GVN on social media",
+    socialIntro: "Follow the newsroom across our official channels.",
   },
   sportsPage: {
     newsTab: "News",
@@ -244,6 +252,7 @@ export type Dictionary = {
   };
   home: {
     breaking: string;
+    justIn: string;
     latest: string;
     viewAll: string;
     loadMore: string;
@@ -261,6 +270,7 @@ export type Dictionary = {
     newsletterCardText: string;
     stayUpdated: string;
     topStories: string;
+    readStory: string;
   };
   article: {
     by: string;
@@ -289,12 +299,15 @@ export type Dictionary = {
   };
   contact: {
     title: string;
+    intro: string;
     name: string;
     email: string;
     subject: string;
     message: string;
     submit: string;
     success: string;
+    socialTitle: string;
+    socialIntro: string;
   };
   footer: {
     rights: string;
@@ -341,6 +354,8 @@ export type Dictionary = {
     closeText: string;
     contactCta: string;
     videosCta: string;
+    socialTitle: string;
+    socialIntro: string;
   };
   sportsPage: {
     newsTab: string;

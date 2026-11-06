@@ -37,6 +37,7 @@ export async function Header({ locale }: { locale: Locale }) {
   const primary: NavLinkItem[] = [
     ...categoryLinks.slice(0, 6),
     { href: localePath(locale, "/about"), label: dict.nav.about },
+    { href: localePath(locale, "/contact"), label: dict.nav.contact },
   ];
   const moreItems: NavLinkItem[] = [
     ...categoryLinks.slice(6),

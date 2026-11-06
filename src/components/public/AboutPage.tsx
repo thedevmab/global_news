@@ -1,15 +1,17 @@
 import Image from "next/image";
 import Link from "next/link";
 import { NewsletterForm } from "@/components/forms/NewsletterForm";
+import { SocialLinks } from "@/components/media/SocialLinks";
 import { getDictionary, localePath, type Locale } from "@/i18n";
 import { categoryBlurb } from "@/lib/category-blurb";
 import { prisma } from "@/lib/db";
 import { mediaUrl } from "@/lib/media-url";
+import { parseSiteSettings, GVN_SOCIAL_DEFAULTS } from "@/lib/site-settings";
 import { cn } from "@/lib/utils";
-import { getActiveCategories } from "@/server/articles/public";
-
-const YOUTUBE_CHANNEL =
-  "https://www.youtube.com/@globalvoicenetwork_official";
+import {
+  getActiveCategories,
+  getSiteSettingsRow,
+} from "@/server/articles/public";
 
 function categoryName(
   locale: Locale,
@@ -41,7 +43,7 @@ const navyLink =
 export async function AboutPage({ locale }: { locale: Locale }) {
   const dict = getDictionary(locale);
   const copy = dict.aboutPage;
-  const [categories, authors] = await Promise.all([
+  const [categories, authors, settingsRow] = await Promise.all([
     getActiveCategories(),
     prisma.authorProfile.findMany({
       where: { isPublic: true },
@@ -49,7 +51,11 @@ export async function AboutPage({ locale }: { locale: Locale }) {
       orderBy: { displayName: "asc" },
       take: 6,
     }),
+    getSiteSettingsRow(),
   ]);
+  const settings = parseSiteSettings(settingsRow?.data);
+  const youtubeUrl =
+    settings.socialLinks.youtube || GVN_SOCIAL_DEFAULTS.youtube;
 
   return (
     <div className="min-w-0">
@@ -284,7 +290,7 @@ export async function AboutPage({ locale }: { locale: Locale }) {
                 {copy.videosBlurb}
               </p>
               <a
-                href={YOUTUBE_CHANNEL}
+                href={youtubeUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={cn("mt-3 inline-block text-sm", textLink)}
@@ -304,6 +310,23 @@ export async function AboutPage({ locale }: { locale: Locale }) {
               </p>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="border-t border-border bg-background">
+        <div className="mx-auto max-w-7xl px-4 py-12 md:py-16">
+          <h2 className="font-serif text-2xl font-semibold text-foreground md:text-3xl">
+            {copy.socialTitle}
+          </h2>
+          <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground md:text-base">
+            {copy.socialIntro}
+          </p>
+          <SocialLinks
+            links={settings.socialLinks}
+            tone="onLight"
+            size="lg"
+            className="mt-6"
+          />
         </div>
       </section>
 

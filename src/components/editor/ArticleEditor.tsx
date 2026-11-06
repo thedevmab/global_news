@@ -13,8 +13,7 @@ import { TableHeader } from "@tiptap/extension-table-header";
 import Youtube from "@tiptap/extension-youtube";
 import { ContentLanguage, type ArticleStatus } from "@prisma/client";
 import { uploadMediaFile } from "@/lib/admin-media-client";
-import { slugify } from "@/lib/utils";
-import { EMPTY_DOC } from "@/lib/tiptap-text";
+import { EMPTY_DOC, extractTipTapText } from "@/lib/tiptap-text";
 import {
   autosaveArticleAction,
   createArticleAction,
@@ -37,9 +36,6 @@ export type ArticleEditorProps = {
   articleId?: string;
   initial?: {
     headline: string;
-    subheadline: string | null;
-    slug: string;
-    summary: string;
     body: unknown;
     categoryId: string;
     tagIds: string[];
@@ -73,10 +69,6 @@ export function ArticleEditor({
 }: ArticleEditorProps) {
   const router = useRouter();
   const [headline, setHeadline] = useState(initial?.headline ?? "");
-  const [subheadline, setSubheadline] = useState(initial?.subheadline ?? "");
-  const [slug, setSlug] = useState(initial?.slug ?? "");
-  const [slugTouched, setSlugTouched] = useState(mode === "edit");
-  const [summary, setSummary] = useState(initial?.summary ?? "");
   const [categoryId, setCategoryId] = useState(
     initial?.categoryId ?? categories[0]?.id ?? "",
   );
@@ -140,12 +132,6 @@ export function ArticleEditor({
   });
 
   useEffect(() => {
-    if (!slugTouched && headline) {
-      setSlug(slugify(headline));
-    }
-  }, [headline, slugTouched]);
-
-  useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
       if (dirtyRef.current) {
         e.preventDefault();
@@ -159,11 +145,8 @@ export function ArticleEditor({
   const payload = useCallback(() => {
     return {
       headline,
-      subheadline: subheadline || null,
-      slug,
-      summary,
       body: editor?.getJSON() ?? EMPTY_DOC,
-      categoryId,
+      categoryId: categoryId || undefined,
       tagIds,
       language,
       seoTitle: seoTitle || null,
@@ -180,9 +163,6 @@ export function ArticleEditor({
     };
   }, [
     headline,
-    subheadline,
-    slug,
-    summary,
     editor,
     categoryId,
     tagIds,
@@ -198,10 +178,25 @@ export function ArticleEditor({
     scheduledAt,
   ]);
 
+  function validateClient(): string | null {
+    if (headline.trim().length < 3) {
+      return "Headline is required (min 3 characters)";
+    }
+    const bodyText = extractTipTapText(editor?.getJSON() ?? EMPTY_DOC);
+    if (bodyText.length < 3) {
+      return "Article body is required";
+    }
+    if (!featuredMediaId) {
+      return "Featured image is required";
+    }
+    return null;
+  }
+
   useEffect(() => {
     if (mode !== "edit" || !articleId) return;
     const timer = setInterval(() => {
       if (!dirtyRef.current) return;
+      if (validateClient()) return;
       void (async () => {
         const result = await autosaveArticleAction(articleId, payload());
         if (result.ok) {
@@ -212,6 +207,7 @@ export function ArticleEditor({
       })();
     }, 30_000);
     return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- validate uses live state via closure
   }, [mode, articleId, payload]);
 
   const markDirty = () => {
@@ -221,6 +217,11 @@ export function ArticleEditor({
 
   function save() {
     setError(null);
+    const clientError = validateClient();
+    if (clientError) {
+      setError(clientError);
+      return;
+    }
     startTransition(async () => {
       if (mode === "create") {
         const result = await createArticleAction(payload());
@@ -249,8 +250,17 @@ export function ArticleEditor({
   function transition(to: ArticleStatus, reason?: string) {
     if (!articleId) return;
     setError(null);
+    const clientError = validateClient();
+    if (clientError) {
+      setError(clientError);
+      return;
+    }
     startTransition(async () => {
-      await updateArticleAction(articleId, payload());
+      const saved = await updateArticleAction(articleId, payload());
+      if (!saved.ok) {
+        setError(saved.error);
+        return;
+      }
       const result = await transitionArticleAction({
         articleId,
         to,
@@ -377,7 +387,7 @@ export function ArticleEditor({
               >
                 Revisions
               </Button>
-              {status === "DRAFT" ? (
+              {status === "DRAFT" && !canPublish ? (
                 <Button type="button" onClick={() => transition("IN_REVIEW")}>
                   Submit review
                 </Button>
@@ -399,12 +409,22 @@ export function ArticleEditor({
                   </Button>
                 </>
               ) : null}
-              {canPublish && (status === "APPROVED" || status === "SCHEDULED") ? (
-                <Button type="button" variant="accent" onClick={() => transition("PUBLISHED")}>
+              {canPublish &&
+              (status === "DRAFT" ||
+                status === "APPROVED" ||
+                status === "SCHEDULED") ? (
+                <Button
+                  type="button"
+                  variant="accent"
+                  onClick={() => transition("PUBLISHED")}
+                  disabled={pending}
+                >
                   Publish
                 </Button>
               ) : null}
-              {canPublish && status === "APPROVED" && scheduledAt ? (
+              {canPublish &&
+              (status === "DRAFT" || status === "APPROVED") &&
+              scheduledAt ? (
                 <Button type="button" onClick={() => transition("SCHEDULED")}>
                   Schedule
                 </Button>
@@ -418,7 +438,9 @@ export function ArticleEditor({
       </div>
 
       {error ? (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+          {error}
+        </p>
       ) : null}
       {saveMsg ? (
         <p className="text-xs text-muted-foreground">{saveMsg}</p>
@@ -427,7 +449,9 @@ export function ArticleEditor({
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="headline">Headline</Label>
+            <Label htmlFor="headline">
+              Headline <span className="text-gvn-red">*</span>
+            </Label>
             <Input
               id="headline"
               value={headline}
@@ -435,61 +459,44 @@ export function ArticleEditor({
                 setHeadline(e.target.value);
                 markDirty();
               }}
+              required
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="subheadline">Subheadline</Label>
-            <Input
-              id="subheadline"
-              value={subheadline}
-              onChange={(e) => {
-                setSubheadline(e.target.value);
-                markDirty();
-              }}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="summary">Summary (max 300)</Label>
-            <Textarea
-              id="summary"
-              maxLength={300}
-              value={summary}
-              onChange={(e) => {
-                setSummary(e.target.value);
-                markDirty();
-              }}
-            />
-            <p className="text-xs text-muted-foreground">{summary.length}/300</p>
-          </div>
-          <div className="overflow-hidden rounded-md border border-border bg-background">
-            <input
-              ref={imageFileRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="hidden"
-              onChange={(e) => void insertBodyImage(e.target.files?.[0] ?? null)}
-            />
-            {toolbar}
-            <EditorContent
-              editor={editor}
-              className="prose-article min-h-[360px] px-4 py-3 focus-within:outline-none [&_.tiptap]:min-h-[340px] [&_.tiptap]:outline-none"
-            />
+            <Label>
+              Body <span className="text-gvn-red">*</span>
+            </Label>
+            <div className="overflow-hidden rounded-md border border-border bg-background">
+              <input
+                ref={imageFileRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={(e) => void insertBodyImage(e.target.files?.[0] ?? null)}
+              />
+              {toolbar}
+              <EditorContent
+                editor={editor}
+                className="prose-article min-h-[360px] px-4 py-3 focus-within:outline-none [&_.tiptap]:min-h-[340px] [&_.tiptap]:outline-none"
+              />
+            </div>
           </div>
         </div>
 
         <aside className="space-y-4 border border-border bg-background p-4">
-          <div className="space-y-2">
-            <Label htmlFor="slug">Slug</Label>
-            <Input
-              id="slug"
-              value={slug}
-              onChange={(e) => {
-                setSlugTouched(true);
-                setSlug(slugify(e.target.value) || e.target.value);
-                markDirty();
-              }}
-            />
-          </div>
+          <FeaturedImagePicker
+            value={featuredMediaId}
+            previewUrl={featuredMediaUrl}
+            onChange={(next) => {
+              setFeaturedMediaId(next?.id ?? "");
+              setFeaturedMediaUrl(next?.url ?? null);
+              markDirty();
+            }}
+          />
+          <p className="text-xs text-muted-foreground">
+            Featured image is required. Slug is generated automatically from the
+            headline.
+          </p>
           <div className="space-y-2">
             <Label htmlFor="category">Category</Label>
             <select
@@ -548,15 +555,6 @@ export function ArticleEditor({
               <option value="am">Amharic</option>
             </select>
           </div>
-          <FeaturedImagePicker
-            value={featuredMediaId}
-            previewUrl={featuredMediaUrl}
-            onChange={(next) => {
-              setFeaturedMediaId(next?.id ?? "");
-              setFeaturedMediaUrl(next?.url ?? null);
-              markDirty();
-            }}
-          />
           <div className="space-y-2">
             <Label htmlFor="seoTitle">SEO title</Label>
             <Input

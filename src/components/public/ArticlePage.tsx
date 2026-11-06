@@ -166,7 +166,7 @@ export async function ArticlePageView({
           <div className="prose-article mt-8 max-w-[68ch]">
             <ArticleBody body={article.body} />
           </div>
-          <AdSlot slotKey="IN_ARTICLE" className="my-8 max-w-[68ch]" />
+          <AdSlot slotKey="MIDDLE" className="my-8 max-w-[68ch]" />
 
           {article.tags.length > 0 ? (
             <ul className="mt-8 flex max-w-[68ch] flex-wrap gap-2">

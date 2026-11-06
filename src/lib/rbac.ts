@@ -203,7 +203,7 @@ export const WORKFLOW_TRANSITIONS: Record<
   ArticleStatus,
   ArticleStatus[]
 > = {
-  DRAFT: ["IN_REVIEW", "TRASH"],
+  DRAFT: ["IN_REVIEW", "PUBLISHED", "SCHEDULED", "TRASH"],
   IN_REVIEW: ["APPROVED", "DRAFT"],
   APPROVED: ["PUBLISHED", "SCHEDULED", "DRAFT"],
   SCHEDULED: ["PUBLISHED", "DRAFT", "APPROVED"],
@@ -251,6 +251,9 @@ export function canPerformTransition(
       hasPermission(user.role, "article:submit_review") &&
       (user.id === authorId || hasPermission(user.role, "article:edit_any"))
     );
+  }
+  if (from === "DRAFT" && (to === "PUBLISHED" || to === "SCHEDULED")) {
+    return hasPermission(user.role, "article:publish");
   }
   if (from === "IN_REVIEW" && to === "APPROVED") {
     return hasPermission(user.role, "article:approve");

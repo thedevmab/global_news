@@ -5,7 +5,6 @@ import {
   canPerformTransition,
   transitionRequiresReason,
 } from "@/lib/rbac";
-import { ForbiddenError } from "@/lib/errors";
 import type { AuthUser } from "@/lib/rbac";
 
 const publisher: AuthUser = {
@@ -50,10 +49,16 @@ describe("workflow transitions", () => {
     ).not.toThrow();
   });
 
-  it("rejects draft → published without urgent override path", () => {
+  it("allows draft → published for publishers (direct post)", () => {
     expect(() =>
       assertValidWorkflowTransition("DRAFT", "PUBLISHED"),
-    ).toThrow(ForbiddenError);
+    ).not.toThrow();
+    expect(
+      canPerformTransition(publisher, "DRAFT", "PUBLISHED", "pub-1"),
+    ).toBe(true);
+    expect(
+      canPerformTransition(contributor, "DRAFT", "PUBLISHED", "con-1"),
+    ).toBe(false);
   });
 
   it("requires reason when returning from review or unpublishing", () => {
