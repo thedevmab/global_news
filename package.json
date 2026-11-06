@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma migrate deploy && next build",
+    "build": "node scripts/migrate-deploy.mjs && next build",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
@@ -15,7 +15,7 @@
     "test:e2e": "playwright test",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "db:migrate:deploy": "prisma migrate deploy",
+    "db:migrate:deploy": "node scripts/migrate-deploy.mjs",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
     "setup:admin": "tsx scripts/setup-admin.ts",
