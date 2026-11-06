@@ -759,24 +759,29 @@ export async function getPublishedStaticPage(slug: string, language?: Lang) {
 }
 
 export async function getActiveAd(slotKey: AdSlotKey) {
-  const now = new Date();
-  const slot = await prisma.adSlot.findUnique({
-    where: { key: slotKey },
-    include: {
-      advertisements: {
-        where: {
-          isActive: true,
-          AND: [
-            { OR: [{ startsAt: null }, { startsAt: { lte: now } }] },
-            { OR: [{ endsAt: null }, { endsAt: { gt: now } }] },
-          ],
+  try {
+    const now = new Date();
+    const slot = await prisma.adSlot.findUnique({
+      where: { key: slotKey },
+      include: {
+        advertisements: {
+          where: {
+            isActive: true,
+            AND: [
+              { OR: [{ startsAt: null }, { startsAt: { lte: now } }] },
+              { OR: [{ endsAt: null }, { endsAt: { gt: now } }] },
+            ],
+          },
+          orderBy: { createdAt: "desc" },
+          take: 1,
         },
-        orderBy: { createdAt: "desc" },
-        take: 1,
       },
-    },
-  });
-  return slot?.advertisements[0] ?? null;
+    });
+    return slot?.advertisements[0] ?? null;
+  } catch {
+    // Missing enum/slot on a lagging DB must not 500 the page.
+    return null;
+  }
 }
 
 export async function getActiveCategories() {

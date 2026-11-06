@@ -9,7 +9,12 @@ export async function AdSlot({
   slotKey: AdSlotKey;
   className?: string;
 }) {
-  const ad = await getActiveAd(slotKey);
+  let ad: Awaited<ReturnType<typeof getActiveAd>> = null;
+  try {
+    ad = await getActiveAd(slotKey);
+  } catch {
+    return null;
+  }
   if (!ad) return null;
 
   const image = ad.imageUrl ? (
