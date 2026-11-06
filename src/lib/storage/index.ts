@@ -109,7 +109,7 @@ class DatabaseStorage implements StorageDriver {
       data: {
         storageKey,
         contentType: opts.contentType,
-        data: opts.buffer,
+        data: Uint8Array.from(opts.buffer),
       },
     });
     return { storageKey, contentType: opts.contentType };

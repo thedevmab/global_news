@@ -19,7 +19,7 @@ export async function GET(
   }
   try {
     const { buffer, contentType } = await getStorage().read(storageKey);
-    return new NextResponse(buffer, {
+    return new NextResponse(new Uint8Array(buffer), {
       headers: {
         "Content-Type": contentType || "application/octet-stream",
         "Cache-Control": "public, max-age=31536000, immutable",
