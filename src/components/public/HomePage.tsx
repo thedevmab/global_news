@@ -204,6 +204,7 @@ export async function HomePage({ locale }: { locale: Locale }) {
           id: article.id,
           headline: article.headline,
           slug: article.slug,
+          language: article.language,
           categorySlug: article.category.slug,
         }))}
       />

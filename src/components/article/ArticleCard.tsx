@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
-import { getDictionary, localePath, type Locale } from "@/i18n";
+import { articlePath, getDictionary, localePath, type Locale } from "@/i18n";
 import { editorial } from "@/lib/editorial-images";
 import { mediaUrl } from "@/lib/media-url";
 import { cn } from "@/lib/utils";
@@ -41,7 +41,7 @@ export function ArticleCard({
   className?: string;
 }) {
   const dict = getDictionary(locale);
-  const href = localePath(locale, `/${article.category.slug}/${article.slug}`);
+  const href = articlePath(article);
   const image = mediaUrl(article.featuredMedia?.storageKey);
   const alt = article.featuredMedia?.altText || article.headline;
   const when = dateLabel(article);

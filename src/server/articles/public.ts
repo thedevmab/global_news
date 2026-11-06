@@ -131,9 +131,21 @@ export async function getPublishedArticleBySlug(
     });
   }
 
-  return prisma.article.findFirst({
+  // Prefer the UI locale, then any published language for this category/slug.
+  // Homepage lists mixed-language stories, so EN pages must still open AM articles.
+  const preferred = await prisma.article.findFirst({
     where: {
       ...publishedWhere(maybeLanguage),
+      slug: slugOrLanguage,
+      category: { slug: categorySlugOrSlug, isActive: true },
+    },
+    select: articleDetailSelect,
+  });
+  if (preferred) return preferred;
+
+  return prisma.article.findFirst({
+    where: {
+      ...publishedWhere(),
       slug: slugOrLanguage,
       category: { slug: categorySlugOrSlug, isActive: true },
     },
@@ -440,6 +452,7 @@ export async function listRecentHeadlines(opts?: {
       id: true,
       headline: true,
       slug: true,
+      language: true,
       publishedAt: true,
       category: { select: { slug: true } },
     },

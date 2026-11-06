@@ -16,7 +16,8 @@ export async function PublicShell({
   const dict = getDictionary(locale);
   let breaking: Awaited<ReturnType<typeof getBreakingNews>> = [];
   try {
-    breaking = await getBreakingNews(locale, 5);
+    // Mixed-language homepage: include Amharic + English breaking items.
+    breaking = await getBreakingNews(undefined, 5);
   } catch {
     // Build/deploy can run before tables exist; avoid crashing the shell.
     breaking = [];
@@ -35,6 +36,7 @@ export async function PublicShell({
           id: b.id,
           headline: b.headline,
           slug: b.slug,
+          language: b.language,
           categorySlug: b.category.slug,
         }))}
       />

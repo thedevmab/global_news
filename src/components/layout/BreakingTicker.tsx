@@ -12,6 +12,7 @@ export type BreakingItem = {
   headline: string;
   slug: string;
   categorySlug: string;
+  language?: string;
 };
 
 export function BreakingTicker({
@@ -57,7 +58,7 @@ export function BreakingTicker({
               <li key={`${item.id}-${idx}`} className="flex items-center">
                 <Link
                   href={localePath(
-                    locale,
+                    item.language === "am" ? "am" : locale,
                     `/${item.categorySlug}/${item.slug}`,
                   )}
                   className="hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

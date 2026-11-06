@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { getDictionary, localePath, type Locale } from "@/i18n";
+import { articlePath, getDictionary, localePath, type Locale } from "@/i18n";
 import { editorial } from "@/lib/editorial-images";
 import { mediaUrl } from "@/lib/media-url";
 import type { ArticleCardData } from "@/server/articles/public";
@@ -39,10 +39,7 @@ export function TopStoriesBand({
         </p>
         <ol className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
           {articles.map((article, index) => {
-            const href = localePath(
-              locale,
-              `/${article.category.slug}/${article.slug}`,
-            );
+            const href = articlePath(article);
             const catHref = localePath(locale, `/${article.category.slug}`);
             const image = mediaUrl(article.featuredMedia?.storageKey);
             const alt = article.featuredMedia?.altText || article.headline;

@@ -13,3 +13,13 @@ export function localePath(locale: Locale, path: string): string {
   if (clean === "/") return "/am";
   return `/am${clean}`;
 }
+
+/** Public article URL using the story language (so Amharic posts open under /am). */
+export function articlePath(article: {
+  language: string;
+  slug: string;
+  category: { slug: string };
+}): string {
+  const locale: Locale = article.language === "am" ? "am" : "en";
+  return localePath(locale, `/${article.category.slug}/${article.slug}`);
+}

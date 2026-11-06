@@ -29,7 +29,7 @@ async function ensureUniqueSlug(
   language: ContentLanguage,
   excludeId?: string,
 ): Promise<{ slug: string; suggestions: string[] }> {
-  const base = slugify(slugSource) || "article";
+  const base = slugify(slugSource) || `story-${Date.now().toString(36)}`;
   const suggestions: string[] = [];
   let candidate = base;
   for (let i = 0; i < 8; i++) {

@@ -7,7 +7,18 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function slugify(text: string): string {
-  return slugifyLib(text, { lower: true, strict: true, trim: true });
+  const ascii = slugifyLib(text, { lower: true, strict: true, trim: true });
+  if (ascii) return ascii;
+  // Amharic / other non-Latin headlines: keep letters & numbers in a URL slug.
+  const unicode = text
+    .normalize("NFKC")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^\p{L}\p{N}-]+/gu, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+  return unicode.slice(0, 96) || `story-${Date.now().toString(36)}`;
 }
 
 export function normalizeEmail(email: string): string {
