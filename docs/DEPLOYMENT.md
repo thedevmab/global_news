@@ -89,7 +89,7 @@ Protect cron routes with `Authorization: Bearer $CRON_SECRET`.
 
 **Local / VPS:** `STORAGE_DRIVER=local` and `UPLOAD_DIR=./uploads` (gitignored). Back up this directory with the database.
 
-**Vercel:** local disk is not writable. Create a Blob store in the Vercel project (**Storage → Create Database → Blob**). Vercel injects `BLOB_READ_WRITE_TOKEN`. Set `STORAGE_DRIVER=blob` (or leave unset — the app auto-selects Blob when the token or `VERCEL` is present). Uploaded files are stored as public Blob URLs in `Media.storageKey`.
+**Vercel:** local disk is not writable. The app stores uploads in Postgres (`MediaObject`, `STORAGE_DRIVER=db`) automatically — no Vercel Blob or S3 required. Keep image sizes within the 5MB limit.
 
 ## 7. Email
 

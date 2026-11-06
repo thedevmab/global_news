@@ -33,7 +33,7 @@ const envSchema = z.object({
     .transform((v) => v !== "false"),
   UPLOAD_DIR: z.string().default("./uploads"),
   UPLOAD_PUBLIC_BASE: z.string().default("/media"),
-  STORAGE_DRIVER: z.enum(["local", "blob", "s3"]).default("local"),
+  STORAGE_DRIVER: z.enum(["local", "db", "blob", "s3"]).default("local"),
   BLOB_READ_WRITE_TOKEN: z.string().optional(),
   S3_BUCKET: z.string().optional(),
   S3_REGION: z.string().optional(),

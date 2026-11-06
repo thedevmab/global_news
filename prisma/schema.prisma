@@ -364,6 +364,14 @@ model MediaVariant {
   @@unique([mediaId, label])
 }
 
+/** Binary payload for STORAGE_DRIVER=db (Vercel / serverless without Blob/S3). */
+model MediaObject {
+  storageKey  String   @id
+  contentType String
+  data        Bytes
+  createdAt   DateTime @default(now())
+}
+
 model ArticleMedia {
   articleId String @db.Uuid
   mediaId   String @db.Uuid

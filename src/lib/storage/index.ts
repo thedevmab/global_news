@@ -1,12 +1,13 @@
 import { mkdir, writeFile, unlink, readFile } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
-import { del, put } from "@vercel/blob";
+import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 
 export interface StoredObject {
   storageKey: string;
   absolutePath?: string;
+  contentType?: string;
 }
 
 export interface StorageDriver {
@@ -16,6 +17,7 @@ export interface StorageDriver {
     contentType: string;
   }): Promise<StoredObject>;
   delete(storageKey: string): Promise<void>;
+  read(storageKey: string): Promise<{ buffer: Buffer; contentType: string }>;
   getAbsolutePath(storageKey: string): string;
 }
 
@@ -24,6 +26,15 @@ function datedObjectName(extension: string): string {
   const month = String(new Date().getUTCMonth() + 1).padStart(2, "0");
   const ext = extension.replace(/^\./, "");
   return `${year}/${month}/${randomUUID()}.${ext}`;
+}
+
+function mimeFromKey(storageKey: string, fallback = "application/octet-stream") {
+  const ext = path.extname(storageKey).toLowerCase();
+  if (ext === ".webp") return "image/webp";
+  if (ext === ".jpg" || ext === ".jpeg") return "image/jpeg";
+  if (ext === ".png") return "image/png";
+  if (ext === ".mp3") return "audio/mpeg";
+  return fallback;
 }
 
 class LocalStorage implements StorageDriver {
@@ -36,7 +47,7 @@ class LocalStorage implements StorageDriver {
   async ensureRoot() {
     if (process.env.VERCEL) {
       throw new Error(
-        "Local disk uploads are not available on Vercel. Create a Blob store (Storage → Blob) so BLOB_READ_WRITE_TOKEN is set, then redeploy.",
+        "Local disk uploads are not available on Vercel. Use database storage (default) instead.",
       );
     }
     await mkdir(this.root, { recursive: true });
@@ -55,7 +66,7 @@ class LocalStorage implements StorageDriver {
     );
     await mkdir(path.dirname(absolutePath), { recursive: true });
     await writeFile(absolutePath, opts.buffer);
-    return { storageKey: relative, absolutePath };
+    return { storageKey: relative, absolutePath, contentType: opts.contentType };
   }
 
   getAbsolutePath(storageKey: string): string {
@@ -80,39 +91,33 @@ class LocalStorage implements StorageDriver {
     }
   }
 
-  async read(storageKey: string): Promise<Buffer> {
-    return readFile(this.getAbsolutePath(storageKey));
+  async read(storageKey: string) {
+    const buffer = await readFile(this.getAbsolutePath(storageKey));
+    return { buffer, contentType: mimeFromKey(storageKey) };
   }
 }
 
-/**
- * Vercel Blob — required on Vercel (local disk is read-only / ephemeral).
- * storageKey is the public blob URL so /media and next/image can use it directly.
- */
-class BlobStorage implements StorageDriver {
+/** Store image bytes in Postgres — works on Vercel without Blob or S3. */
+class DatabaseStorage implements StorageDriver {
   async put(opts: {
     buffer: Buffer;
     extension: string;
     contentType: string;
   }): Promise<StoredObject> {
-    if (!process.env.BLOB_READ_WRITE_TOKEN) {
-      throw new Error(
-        "Image uploads on Vercel need Blob storage. In the Vercel project open Storage → Create → Blob, then redeploy.",
-      );
-    }
-    const pathname = datedObjectName(opts.extension);
-    const result = await put(pathname, opts.buffer, {
-      access: "public",
-      contentType: opts.contentType,
-      addRandomSuffix: false,
-      token: process.env.BLOB_READ_WRITE_TOKEN,
+    const storageKey = datedObjectName(opts.extension);
+    await prisma.mediaObject.create({
+      data: {
+        storageKey,
+        contentType: opts.contentType,
+        data: opts.buffer,
+      },
     });
-    return { storageKey: result.url };
+    return { storageKey, contentType: opts.contentType };
   }
 
   async delete(storageKey: string): Promise<void> {
     try {
-      await del(storageKey, { token: process.env.BLOB_READ_WRITE_TOKEN });
+      await prisma.mediaObject.delete({ where: { storageKey } });
     } catch (err) {
       logger.warn("storage.delete_failed", {
         storageKey,
@@ -121,8 +126,21 @@ class BlobStorage implements StorageDriver {
     }
   }
 
+  async read(storageKey: string) {
+    const row = await prisma.mediaObject.findUnique({
+      where: { storageKey },
+    });
+    if (!row) {
+      throw new Error("Not found");
+    }
+    return {
+      buffer: Buffer.from(row.data),
+      contentType: row.contentType || mimeFromKey(storageKey),
+    };
+  }
+
   getAbsolutePath(): string {
-    throw new Error("Blob storage does not use local paths");
+    throw new Error("Database storage does not use local paths");
   }
 }
 
@@ -130,10 +148,13 @@ class BlobStorage implements StorageDriver {
 class S3Storage implements StorageDriver {
   async put(): Promise<StoredObject> {
     throw new Error(
-      "S3 storage is not configured. Set STORAGE_DRIVER=blob on Vercel or implement S3 credentials.",
+      "S3 storage is not configured. Set STORAGE_DRIVER=db (default on Vercel) or configure S3.",
     );
   }
   async delete(): Promise<void> {
+    throw new Error("S3 storage is not configured.");
+  }
+  async read(): Promise<{ buffer: Buffer; contentType: string }> {
     throw new Error("S3 storage is not configured.");
   }
   getAbsolutePath(): string {
@@ -143,28 +164,28 @@ class S3Storage implements StorageDriver {
 
 let driver: StorageDriver | null = null;
 
-function resolveDriverName(): "local" | "blob" | "s3" {
+function resolveDriverName(): "local" | "db" | "s3" {
   const explicit = (process.env.STORAGE_DRIVER || "").toLowerCase();
   const onVercel = Boolean(process.env.VERCEL);
 
-  // Vercel filesystem is read-only — never use local disk there, even if
-  // STORAGE_DRIVER=local was copied from .env.example into project env.
+  // Vercel has no writable disk. Prefer Postgres media objects — no Blob needed.
   if (onVercel) {
     if (explicit === "s3") return "s3";
-    return "blob";
+    return "db";
   }
 
-  if (explicit === "blob" || explicit === "s3" || explicit === "local") {
+  if (explicit === "db" || explicit === "s3" || explicit === "local") {
     return explicit;
   }
-  if (process.env.BLOB_READ_WRITE_TOKEN) return "blob";
+  // Treat legacy "blob" env as db so old Vercel settings keep working.
+  if (explicit === "blob") return "db";
   return "local";
 }
 
 export function getStorage(): StorageDriver {
   if (driver) return driver;
   const name = resolveDriverName();
-  if (name === "blob") driver = new BlobStorage();
+  if (name === "db") driver = new DatabaseStorage();
   else if (name === "s3") driver = new S3Storage();
   else driver = new LocalStorage();
   return driver;

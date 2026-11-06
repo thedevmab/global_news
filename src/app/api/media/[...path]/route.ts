@@ -1,15 +1,5 @@
 import { NextResponse } from "next/server";
-import { getLocalStorage, isRemoteStorageKey } from "@/lib/storage";
-import { readFile } from "fs/promises";
-import path from "path";
-
-const MIME: Record<string, string> = {
-  ".webp": "image/webp",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".png": "image/png",
-  ".mp3": "audio/mpeg",
-};
+import { getStorage, isRemoteStorageKey } from "@/lib/storage";
 
 export async function GET(
   _req: Request,
@@ -24,18 +14,14 @@ export async function GET(
   ) {
     return NextResponse.json({ error: "Invalid path" }, { status: 400 });
   }
-  // Legacy keys should never be remote URLs (those are used as Image src directly).
   if (isRemoteStorageKey(storageKey)) {
     return NextResponse.redirect(storageKey, 302);
   }
   try {
-    const storage = getLocalStorage();
-    const absolute = storage.getAbsolutePath(storageKey);
-    const buf = await readFile(absolute);
-    const ext = path.extname(absolute).toLowerCase();
-    return new NextResponse(buf, {
+    const { buffer, contentType } = await getStorage().read(storageKey);
+    return new NextResponse(buffer, {
       headers: {
-        "Content-Type": MIME[ext] || "application/octet-stream",
+        "Content-Type": contentType || "application/octet-stream",
         "Cache-Control": "public, max-age=31536000, immutable",
         "X-Content-Type-Options": "nosniff",
       },

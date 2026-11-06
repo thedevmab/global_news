@@ -39,14 +39,6 @@ const nextConfig: NextConfig = {
         hostname: "i4.ytimg.com",
         pathname: "/vi/**",
       },
-      {
-        protocol: "https",
-        hostname: "*.public.blob.vercel-storage.com",
-      },
-      {
-        protocol: "https",
-        hostname: "*.blob.vercel-storage.com",
-      },
     ],
   },
   async rewrites() {
