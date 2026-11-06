@@ -1,6 +1,7 @@
 import { mkdir, writeFile, unlink, readFile } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
+import { del, put } from "@vercel/blob";
 import { logger } from "@/lib/logger";
 
 export interface StoredObject {
@@ -16,6 +17,13 @@ export interface StorageDriver {
   }): Promise<StoredObject>;
   delete(storageKey: string): Promise<void>;
   getAbsolutePath(storageKey: string): string;
+}
+
+function datedObjectName(extension: string): string {
+  const year = new Date().getUTCFullYear();
+  const month = String(new Date().getUTCMonth() + 1).padStart(2, "0");
+  const ext = extension.replace(/^\./, "");
+  return `${year}/${month}/${randomUUID()}.${ext}`;
 }
 
 class LocalStorage implements StorageDriver {
@@ -35,22 +43,21 @@ class LocalStorage implements StorageDriver {
     contentType: string;
   }): Promise<StoredObject> {
     await this.ensureRoot();
-    const year = new Date().getUTCFullYear();
-    const month = String(new Date().getUTCMonth() + 1).padStart(2, "0");
-    const dir = path.join(this.root, String(year), month);
-    await mkdir(dir, { recursive: true });
-    const name = `${randomUUID()}.${opts.extension.replace(/^\./, "")}`;
-    const absolutePath = path.join(/*turbopackIgnore: true*/ dir, name);
+    const relative = datedObjectName(opts.extension);
+    const absolutePath = path.join(
+      /*turbopackIgnore: true*/ this.root,
+      ...relative.split("/"),
+    );
+    await mkdir(path.dirname(absolutePath), { recursive: true });
     await writeFile(absolutePath, opts.buffer);
-    const storageKey = path
-      .relative(this.root, absolutePath)
-      .split(path.sep)
-      .join("/");
-    return { storageKey, absolutePath };
+    return { storageKey: relative, absolutePath };
   }
 
   getAbsolutePath(storageKey: string): string {
-    const resolved = path.resolve(/*turbopackIgnore: true*/ this.root, storageKey);
+    const resolved = path.resolve(
+      /*turbopackIgnore: true*/ this.root,
+      storageKey,
+    );
     if (!resolved.startsWith(this.root)) {
       throw new Error("Invalid storage key");
     }
@@ -73,11 +80,52 @@ class LocalStorage implements StorageDriver {
   }
 }
 
+/**
+ * Vercel Blob — required on Vercel (local disk is read-only / ephemeral).
+ * storageKey is the public blob URL so /media and next/image can use it directly.
+ */
+class BlobStorage implements StorageDriver {
+  async put(opts: {
+    buffer: Buffer;
+    extension: string;
+    contentType: string;
+  }): Promise<StoredObject> {
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      throw new Error(
+        "Image uploads on Vercel need Blob storage. In the Vercel project open Storage → Create → Blob, then redeploy.",
+      );
+    }
+    const pathname = datedObjectName(opts.extension);
+    const result = await put(pathname, opts.buffer, {
+      access: "public",
+      contentType: opts.contentType,
+      addRandomSuffix: false,
+      token: process.env.BLOB_READ_WRITE_TOKEN,
+    });
+    return { storageKey: result.url };
+  }
+
+  async delete(storageKey: string): Promise<void> {
+    try {
+      await del(storageKey, { token: process.env.BLOB_READ_WRITE_TOKEN });
+    } catch (err) {
+      logger.warn("storage.delete_failed", {
+        storageKey,
+        error: String(err),
+      });
+    }
+  }
+
+  getAbsolutePath(): string {
+    throw new Error("Blob storage does not use local paths");
+  }
+}
+
 /** Stub for future S3-compatible storage. */
 class S3Storage implements StorageDriver {
   async put(): Promise<StoredObject> {
     throw new Error(
-      "S3 storage is not configured. Set STORAGE_DRIVER=local or implement S3 credentials.",
+      "S3 storage is not configured. Set STORAGE_DRIVER=blob on Vercel or implement S3 credentials.",
     );
   }
   async delete(): Promise<void> {
@@ -90,13 +138,29 @@ class S3Storage implements StorageDriver {
 
 let driver: StorageDriver | null = null;
 
+function resolveDriverName(): "local" | "blob" | "s3" {
+  const explicit = process.env.STORAGE_DRIVER;
+  if (explicit === "blob" || explicit === "s3" || explicit === "local") {
+    return explicit;
+  }
+  if (process.env.BLOB_READ_WRITE_TOKEN) return "blob";
+  if (process.env.VERCEL) return "blob";
+  return "local";
+}
+
 export function getStorage(): StorageDriver {
   if (driver) return driver;
-  driver =
-    process.env.STORAGE_DRIVER === "s3" ? new S3Storage() : new LocalStorage();
+  const name = resolveDriverName();
+  if (name === "blob") driver = new BlobStorage();
+  else if (name === "s3") driver = new S3Storage();
+  else driver = new LocalStorage();
   return driver;
 }
 
 export function getLocalStorage(): LocalStorage {
   return new LocalStorage();
+}
+
+export function isRemoteStorageKey(storageKey: string): boolean {
+  return /^https?:\/\//i.test(storageKey);
 }

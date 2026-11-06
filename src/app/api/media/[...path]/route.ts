@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getLocalStorage } from "@/lib/storage";
+import { getLocalStorage, isRemoteStorageKey } from "@/lib/storage";
 import { readFile } from "fs/promises";
 import path from "path";
 
@@ -23,6 +23,10 @@ export async function GET(
     storageKey.includes("\\")
   ) {
     return NextResponse.json({ error: "Invalid path" }, { status: 400 });
+  }
+  // Legacy keys should never be remote URLs (those are used as Image src directly).
+  if (isRemoteStorageKey(storageKey)) {
+    return NextResponse.redirect(storageKey, 302);
   }
   try {
     const storage = getLocalStorage();

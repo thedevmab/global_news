@@ -33,6 +33,10 @@ export async function POST(req: Request) {
       );
     }
     console.error(err);
-    return NextResponse.json({ error: "Upload failed" }, { status: 400 });
+    const message =
+      err instanceof Error && err.message
+        ? err.message
+        : "Upload failed";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }

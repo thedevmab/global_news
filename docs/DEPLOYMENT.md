@@ -87,7 +87,9 @@ Protect cron routes with `Authorization: Bearer $CRON_SECRET`.
 
 ## 6. Uploads
 
-Default `UPLOAD_DIR=./uploads` (gitignored). Back up this directory with the database. For multi-instance hosts, switch `STORAGE_DRIVER=s3` when credentials are ready (stub present).
+**Local / VPS:** `STORAGE_DRIVER=local` and `UPLOAD_DIR=./uploads` (gitignored). Back up this directory with the database.
+
+**Vercel:** local disk is not writable. Create a Blob store in the Vercel project (**Storage → Create Database → Blob**). Vercel injects `BLOB_READ_WRITE_TOKEN`. Set `STORAGE_DRIVER=blob` (or leave unset — the app auto-selects Blob when the token or `VERCEL` is present). Uploaded files are stored as public Blob URLs in `Media.storageKey`.
 
 ## 7. Email
 
