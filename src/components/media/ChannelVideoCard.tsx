@@ -21,7 +21,7 @@ export function ChannelVideoCard({
       href={localePath(locale, `/videos/${video.id}`)}
       className="group block"
     >
-      <span className="relative block aspect-video overflow-hidden bg-gvn-navy">
+      <span className="gvn-media relative block aspect-video bg-gvn-navy">
         <Image
           src={video.thumbnailUrl}
           alt=""

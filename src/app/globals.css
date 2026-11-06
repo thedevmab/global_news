@@ -173,7 +173,13 @@ body {
 .prose-article img {
   max-width: 100%;
   height: auto;
-  border-radius: 0.25rem;
+  border-radius: var(--radius);
+}
+
+/* Shared rounded crop for public media frames (thumbnails, cards, featured). */
+.gvn-media {
+  overflow: hidden;
+  border-radius: var(--radius);
 }
 
 .prose-article table {

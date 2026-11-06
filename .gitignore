@@ -34,6 +34,9 @@ yarn-error.log*
 .env*
 !.env.example
 
+# private owner credentials / handover (do not commit)
+OWNER-HANDOVER.txt
+
 # uploads (local media storage)
 /uploads
 !/uploads/.gitkeep

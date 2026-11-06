@@ -67,7 +67,7 @@ export function FeaturedImagePicker({
     <div className="space-y-2">
       <Label>Featured image</Label>
       {displayUrl ? (
-        <div className="relative aspect-video overflow-hidden border border-border bg-muted">
+        <div className="gvn-media relative aspect-video border border-border bg-muted">
           <Image
             src={displayUrl}
             alt="Featured"
@@ -78,7 +78,7 @@ export function FeaturedImagePicker({
           />
         </div>
       ) : (
-        <div className="flex aspect-video items-center justify-center border border-dashed border-border bg-muted/40 text-sm text-muted-foreground">
+        <div className="gvn-media flex aspect-video items-center justify-center border border-dashed border-border bg-muted/40 text-sm text-muted-foreground">
           No featured image
         </div>
       )}
@@ -139,7 +139,7 @@ export function FeaturedImagePicker({
                   <li key={item.id}>
                     <button
                       type="button"
-                      className={`relative aspect-square w-full overflow-hidden border ${
+                      className={`gvn-media relative aspect-square w-full border ${
                         selected
                           ? "border-gvn-navy ring-2 ring-gvn-navy"
                           : "border-border"

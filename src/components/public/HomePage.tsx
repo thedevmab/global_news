@@ -270,7 +270,7 @@ export async function HomePage({ locale }: { locale: Locale }) {
                     <Link
                       key={tile.id}
                       href={localePath(locale, `/${tile.slug}`)}
-                      className="group relative block aspect-[16/10] overflow-hidden bg-gvn-navy focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gvn-red"
+                      className="gvn-media group relative block aspect-[16/10] bg-gvn-navy focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gvn-red"
                     >
                       <Image
                         src={tile.image || editorialFallback(index)}
@@ -382,7 +382,7 @@ export async function HomePage({ locale }: { locale: Locale }) {
                   )}
                   className="group block"
                 >
-                  <span className="relative block aspect-video overflow-hidden bg-gvn-navy">
+                  <span className="gvn-media relative block aspect-video bg-gvn-navy">
                     <Image
                       src={
                         channelVideo ? channelVideo.thumbnailUrl : editorial.city

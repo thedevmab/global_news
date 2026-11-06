@@ -71,7 +71,7 @@ function MediaLibraryCard({ item }: { item: MediaLibraryItem }) {
 
   return (
     <article className="overflow-hidden border border-border bg-card">
-      <div className="relative aspect-[4/3] bg-muted">
+      <div className="gvn-media relative aspect-[4/3] bg-muted">
         <Image
           src={src}
           alt={altText || item.originalName}

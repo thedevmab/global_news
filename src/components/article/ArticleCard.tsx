@@ -52,7 +52,7 @@ export function ArticleCard({
     return (
       <article className={cn("group relative h-full min-h-[340px]", className)}>
         <Link href={href} className="block h-full min-h-[340px] lg:min-h-[460px]">
-          <div className="relative h-full min-h-[340px] overflow-hidden bg-gvn-navy lg:min-h-[460px]">
+          <div className="gvn-media relative h-full min-h-[340px] bg-gvn-navy lg:min-h-[460px]">
             <Image
               src={image || editorial.skyline}
               alt={image ? alt : ""}
@@ -104,7 +104,7 @@ export function ArticleCard({
         <Link
           href={href}
           className={cn(
-            "relative shrink-0 overflow-hidden bg-gvn-navy",
+            "gvn-media relative shrink-0 bg-gvn-navy",
             thumb === "wide" ? "h-[68px] w-[104px]" : "size-[72px]",
           )}
         >
@@ -147,7 +147,7 @@ export function ArticleCard({
       <article className={cn("group flex gap-3", className)}>
         <Link
           href={href}
-          className="relative size-16 shrink-0 overflow-hidden bg-gvn-navy"
+          className="gvn-media relative size-16 shrink-0 bg-gvn-navy"
         >
           <Image
             src={image || editorial.skyline}
@@ -180,7 +180,7 @@ export function ArticleCard({
     <article className={cn("group flex flex-col", className)}>
       <Link
         href={href}
-        className="relative mb-3 aspect-[16/10] overflow-hidden bg-gvn-navy"
+        className="gvn-media relative mb-3 aspect-[16/10] bg-gvn-navy"
       >
         <Image
           src={image || editorial.skyline}

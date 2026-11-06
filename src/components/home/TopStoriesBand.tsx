@@ -49,17 +49,17 @@ export function TopStoriesBand({
             const cat = categoryName(locale, article.category);
 
             return (
-              <li key={article.id} className="group flex gap-3">
+              <li key={article.id} className="group flex min-w-0 gap-3">
                 <span
                   aria-hidden
-                  className="mt-0.5 font-serif text-2xl font-semibold tabular-nums leading-none text-gvn-red/90"
+                  className="mt-0.5 shrink-0 font-serif text-2xl font-semibold tabular-nums leading-none text-gvn-red/90"
                 >
                   {String(index + 1).padStart(2, "0")}
                 </span>
                 <div className="min-w-0 flex-1">
                   <Link
                     href={href}
-                    className="relative mb-2.5 block aspect-[16/10] overflow-hidden bg-gvn-navy"
+                    className="gvn-media relative mb-2.5 block w-full aspect-[16/10] bg-gvn-navy"
                   >
                     <Image
                       src={image || editorial.city}

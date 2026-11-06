@@ -148,7 +148,7 @@ export async function ArticlePageView({
           </div>
 
           <figure className="mt-6">
-            <div className="relative aspect-[16/9] overflow-hidden bg-gvn-navy">
+            <div className="gvn-media relative aspect-[16/9] bg-gvn-navy">
               <Image
                 src={image || editorial.skyline}
                 alt={image ? article.featuredMedia?.altText || article.headline : ""}

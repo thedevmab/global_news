@@ -22,7 +22,7 @@ export async function AdSlot({
     <img
       src={ad.imageUrl}
       alt={ad.name}
-      className="mx-auto h-auto max-h-36 w-full max-w-5xl object-contain md:max-h-44"
+      className="gvn-media mx-auto h-auto max-h-36 w-full max-w-5xl object-contain md:max-h-44"
     />
   ) : null;
 
