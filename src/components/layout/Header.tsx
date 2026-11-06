@@ -1,6 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Search } from "lucide-react";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 import { getDictionary, localePath, type Locale } from "@/i18n";
 import { getActiveCategories } from "@/server/articles/public";
 import { LanguageSwitch } from "./LanguageSwitch";
@@ -19,7 +19,7 @@ function categoryLabel(locale: Locale, cat: NavCategory) {
 }
 
 const iconBtn =
-  "inline-flex h-9 w-9 items-center justify-center rounded-md text-white/90 hover:bg-white/10 hover:text-white focus-visible:!outline-white";
+  "inline-flex h-9 w-9 items-center justify-center rounded-md text-chrome-foreground/90 hover:bg-chrome-muted hover:text-chrome-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export async function Header({ locale }: { locale: Locale }) {
   const dict = getDictionary(locale);
@@ -47,21 +47,14 @@ export async function Header({ locale }: { locale: Locale }) {
   ];
 
   return (
-    <header className="sticky top-0 z-40 bg-gvn-navy text-white">
+    <header className="sticky top-0 z-40 border-b border-chrome-border bg-chrome text-chrome-foreground">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4">
         <Link
           href={localePath(locale, "/")}
-          className="relative flex shrink-0 items-center focus-visible:!outline-white"
+          className="relative flex shrink-0 items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label={dict.siteName}
         >
-          <Image
-            src="/brand/gvn-logo-mark.png"
-            alt=""
-            width={144}
-            height={51}
-            className="h-8 w-auto"
-            priority
-          />
+          <BrandLogo priority imageClassName="h-8 w-auto" />
         </Link>
 
         <PrimaryNav

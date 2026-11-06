@@ -11,13 +11,13 @@ export async function ContactPage({ locale }: { locale: Locale }) {
 
   return (
     <div className="bg-background">
-      <header className="border-b border-border bg-gvn-navy text-white">
+      <header className="border-b border-border bg-background text-foreground dark:bg-inverse dark:text-inverse-foreground">
         <div aria-hidden className="h-[3px] bg-gvn-red" />
         <div className="mx-auto max-w-3xl px-4 py-12 md:py-16">
-          <h1 className="font-serif text-3xl font-semibold tracking-tight md:text-5xl">
+          <h1 className="font-serif text-3xl font-semibold tracking-tight text-gvn-navy dark:text-white md:text-5xl">
             {dict.contact.title}
           </h1>
-          <p className="mt-4 max-w-xl text-base leading-relaxed text-white/75 md:text-lg">
+          <p className="mt-4 max-w-xl text-base leading-relaxed text-muted-foreground dark:text-white/75 md:text-lg">
             {dict.contact.intro}
           </p>
         </div>

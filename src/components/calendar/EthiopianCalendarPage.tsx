@@ -139,21 +139,22 @@ export function EthiopianCalendarPage({ locale }: { locale: Locale }) {
 
   return (
     <div className="min-w-0">
-      <header className="bg-gvn-navy text-white">
+      <header className="border-b border-border bg-background text-foreground dark:bg-inverse dark:text-inverse-foreground">
+        <div aria-hidden className="h-[3px] bg-gvn-red" />
         <div className="mx-auto max-w-7xl px-4 py-10 md:py-12">
-          <p className="text-xs font-semibold uppercase tracking-wide text-white/70">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground dark:text-white/70">
             {copy.ethLabel}
           </p>
-          <h1 className="mt-1 font-serif text-4xl font-bold md:text-5xl">
+          <h1 className="mt-1 font-serif text-4xl font-bold text-gvn-navy dark:text-white md:text-5xl">
             {copy.title}
           </h1>
-          <p className="mt-2 max-w-2xl text-sm text-white/80 md:text-base">
+          <p className="mt-2 max-w-2xl text-sm text-muted-foreground dark:text-white/80 md:text-base">
             {copy.standfirst}
           </p>
-          <p className="mt-4 text-sm text-white/90">
+          <p className="mt-4 text-sm text-foreground dark:text-white/90">
             <span className="font-semibold">{copy.today}:</span>{" "}
             {formatEthDate(today, locale, { weekday: true })}
-            <span className="mx-2 text-white/40">·</span>
+            <span className="mx-2 text-muted-foreground/60 dark:text-white/40">·</span>
             {formatGregDate(todayG, locale)}
           </p>
         </div>

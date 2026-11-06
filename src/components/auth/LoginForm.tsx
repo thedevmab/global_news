@@ -41,14 +41,16 @@ export function LoginForm() {
     >
       <div className="mb-8">
         <div className="mb-5 flex items-center gap-3">
-          <Image
-            src="/brand/gvn-logo-mark.png"
-            alt="Global Voice Network"
-            width={48}
-            height={48}
-            className="h-12 w-12 object-contain"
-            priority
-          />
+          <span className="inline-flex rounded-md bg-gvn-navy p-1.5">
+            <Image
+              src="/brand/gvn-logo-mark.png"
+              alt="Global Voice Network"
+              width={48}
+              height={48}
+              className="h-10 w-10 object-contain"
+              priority
+            />
+          </span>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gvn-red">
               Global Voice Network

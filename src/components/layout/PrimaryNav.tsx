@@ -53,8 +53,10 @@ function NavAnchor({ item, active }: { item: NavLinkItem; active: boolean }) {
     <Link
       href={item.href}
       className={cn(
-        "whitespace-nowrap px-2.5 py-1 text-sm font-medium focus-visible:!outline-white",
-        active ? "text-white" : "text-white/80 hover:text-white",
+        "whitespace-nowrap px-2.5 py-1 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        active
+          ? "text-chrome-foreground"
+          : "text-chrome-foreground/70 hover:text-chrome-foreground",
       )}
       aria-current={active ? "page" : undefined}
     >
@@ -93,7 +95,7 @@ function MoreMenu({
     <div ref={ref} className="relative shrink-0">
       <button
         type="button"
-        className="inline-flex items-center gap-1 whitespace-nowrap px-2.5 py-1 text-sm font-medium text-white/80 hover:text-white focus-visible:!outline-white"
+        className="inline-flex items-center gap-1 whitespace-nowrap px-2.5 py-1 text-sm font-medium text-chrome-foreground/70 hover:text-chrome-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         aria-expanded={open}
         aria-haspopup="menu"
         onClick={() => setOpen((value) => !value)}
@@ -107,14 +109,14 @@ function MoreMenu({
       {open ? (
         <div
           role="menu"
-          className="absolute left-0 top-full z-50 mt-2 min-w-48 rounded-md border border-white/10 bg-gvn-navy py-1 shadow-xl"
+          className="absolute left-0 top-full z-50 mt-2 min-w-48 rounded-md border border-chrome-border bg-chrome py-1 text-chrome-foreground shadow-xl"
         >
           {items.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               role="menuitem"
-              className="block px-3 py-2 text-sm text-white/90 hover:bg-white/10 hover:text-white"
+              className="block px-3 py-2 text-sm text-chrome-foreground/90 hover:bg-chrome-muted hover:text-chrome-foreground"
               onClick={() => setOpen(false)}
             >
               {item.label}

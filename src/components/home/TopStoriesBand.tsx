@@ -27,13 +27,13 @@ export function TopStoriesBand({
   return (
     <section
       aria-labelledby="top-stories-heading"
-      className="border-b border-white/10 bg-gvn-deep-navy text-white"
+      className="border-b border-chrome-border bg-chrome text-chrome-foreground"
     >
       <div className="h-[2px] bg-gvn-red" aria-hidden />
       <div className="mx-auto max-w-7xl px-4 py-6 md:py-7">
         <p
           id="top-stories-heading"
-          className="mb-5 text-[11px] font-bold uppercase tracking-[0.2em] text-white/55"
+          className="mb-5 text-[11px] font-bold uppercase tracking-[0.2em] text-chrome-foreground/55"
         >
           {dict.home.topStories}
         </p>
@@ -75,7 +75,7 @@ export function TopStoriesBand({
                   >
                     {cat}
                   </Link>
-                  <h3 className="mt-1 text-sm font-semibold leading-snug text-white md:text-[15px]">
+                  <h3 className="mt-1 text-sm font-semibold leading-snug text-chrome-foreground md:text-[15px]">
                     <Link
                       href={href}
                       className="line-clamp-3 transition-colors hover:text-gvn-red"

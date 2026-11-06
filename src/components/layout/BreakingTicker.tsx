@@ -34,7 +34,7 @@ export function BreakingTicker({
 
   return (
     <div
-      className="bg-gvn-deep-navy text-white"
+      className="border-b border-chrome-border bg-chrome text-chrome-foreground"
       role="region"
       aria-label={dict.home.breaking}
     >
@@ -60,11 +60,11 @@ export function BreakingTicker({
                     locale,
                     `/${item.categorySlug}/${item.slug}`,
                   )}
-                  className="hover:underline focus-visible:!outline-white"
+                  className="hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {item.headline}
                 </Link>
-                <span aria-hidden className="px-4 text-white/35">
+                <span aria-hidden className="px-4 text-chrome-foreground/35">
                   •
                 </span>
               </li>
@@ -73,7 +73,7 @@ export function BreakingTicker({
         </div>
         <button
           type="button"
-          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-white/80 hover:bg-white/10 hover:text-white focus-visible:!outline-white"
+          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-chrome-foreground/80 hover:bg-chrome-muted hover:text-chrome-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-pressed={paused}
           aria-label={paused ? "Resume breaking news" : "Pause breaking news"}
           onClick={() => setPaused((value) => !value)}

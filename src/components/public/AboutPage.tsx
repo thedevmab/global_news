@@ -330,19 +330,21 @@ export async function AboutPage({ locale }: { locale: Locale }) {
         </div>
       </section>
 
-      <section className="bg-gvn-navy text-white">
+      <section className="bg-surface text-surface-foreground dark:bg-inverse dark:text-inverse-foreground">
         <div aria-hidden className="h-[3px] bg-gvn-red" />
         <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 pb-20 pt-12 md:pb-24 lg:flex-row lg:items-end lg:justify-between lg:pt-14">
           <div className="max-w-xl min-w-0">
-            <h2 className="font-serif text-3xl font-semibold leading-tight text-white md:text-4xl">
+            <h2 className="font-serif text-3xl font-semibold leading-tight text-gvn-navy dark:text-white md:text-4xl">
               {copy.closeTitle}
             </h2>
-            <p className="mt-3 text-sm leading-relaxed text-white/75 md:text-base">
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground dark:text-white/75 md:text-base">
               {copy.closeText}
             </p>
             <Link
               href={localePath(locale, "/contact")}
-              className={cn("mt-6 inline-block text-base", navyLink)}
+              className={cn(
+                "mt-6 inline-block text-base font-semibold underline decoration-gvn-red decoration-2 underline-offset-4 hover:text-gvn-red dark:text-white dark:hover:decoration-white",
+              )}
             >
               {copy.contactCta}
             </Link>
@@ -352,7 +354,7 @@ export async function AboutPage({ locale }: { locale: Locale }) {
               dict={dict}
               locale={locale}
               variant="inline"
-              tone="onDark"
+              tone="onChrome"
             />
           </div>
         </div>

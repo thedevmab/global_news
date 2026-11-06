@@ -26,11 +26,11 @@ export function AdminSidebar({
   return (
     <aside
       className={cn(
-        "flex h-full flex-col border-r border-white/10 bg-gvn-deep-navy text-white transition-[width] duration-200",
+        "flex h-full flex-col border-r border-chrome-border bg-chrome text-chrome-foreground transition-[width] duration-200",
         collapsed ? "w-[72px]" : "w-64",
       )}
     >
-      <div className="flex h-14 items-center justify-between gap-2 border-b border-white/10 px-3">
+      <div className="flex h-14 items-center justify-between gap-2 border-b border-chrome-border px-3">
         {!collapsed ? (
           <Link href="/admin" className="min-w-0">
             <span className="block truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-gvn-red">
@@ -52,7 +52,7 @@ export function AdminSidebar({
           type="button"
           variant="ghost"
           size="icon"
-          className="shrink-0 text-white/80 hover:bg-white/10 hover:text-white"
+          className="shrink-0 text-chrome-foreground/80 hover:bg-chrome-muted hover:text-chrome-foreground"
           onClick={onToggle}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
@@ -75,8 +75,8 @@ export function AdminSidebar({
               className={cn(
                 "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
                 active
-                  ? "bg-white/15 font-semibold text-white"
-                  : "text-white/70 hover:bg-white/10 hover:text-white",
+                  ? "bg-chrome-muted font-semibold text-chrome-foreground"
+                  : "text-chrome-foreground/70 hover:bg-chrome-muted hover:text-chrome-foreground",
                 collapsed && "justify-center px-2",
               )}
             >

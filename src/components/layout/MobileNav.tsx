@@ -34,7 +34,7 @@ export function MobileNav({
         type="button"
         aria-expanded={open}
         aria-label="Open menu"
-        className="inline-flex h-9 w-9 items-center justify-center rounded-md text-white hover:bg-white/10 focus-visible:!outline-white"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-md text-chrome-foreground hover:bg-chrome-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         onClick={() => setOpen(true)}
       >
         <Menu className="h-5 w-5" />
@@ -47,12 +47,12 @@ export function MobileNav({
             aria-label="Close menu"
             onClick={() => setOpen(false)}
           />
-          <aside className="absolute right-0 top-0 flex h-full w-[min(100%,18rem)] flex-col bg-gvn-deep-navy p-4 text-white shadow-xl">
+          <aside className="absolute right-0 top-0 flex h-full w-[min(100%,18rem)] flex-col border-l border-chrome-border bg-chrome p-4 text-chrome-foreground shadow-xl">
             <div className="mb-4 flex items-center justify-between">
               <span className="text-sm font-semibold">{dict.siteName}</span>
               <button
                 type="button"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-md text-white hover:bg-white/10"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-md text-chrome-foreground hover:bg-chrome-muted"
                 onClick={() => setOpen(false)}
                 aria-label="Close menu"
               >
@@ -62,7 +62,7 @@ export function MobileNav({
             <nav className="flex flex-1 flex-col gap-1 overflow-y-auto">
               <Link
                 href={localePath(locale, "/")}
-                className="rounded px-3 py-2 text-sm hover:bg-white/10"
+                className="rounded px-3 py-2 text-sm hover:bg-chrome-muted"
                 onClick={() => setOpen(false)}
               >
                 {dict.nav.home}
@@ -71,7 +71,7 @@ export function MobileNav({
                 <Link
                   key={c.slug}
                   href={localePath(locale, `/${c.slug}`)}
-                  className="rounded px-3 py-2 text-sm hover:bg-white/10"
+                  className="rounded px-3 py-2 text-sm hover:bg-chrome-muted"
                   onClick={() => setOpen(false)}
                 >
                   {locale === "am" && c.nameAm ? c.nameAm : c.nameEn}
@@ -79,48 +79,48 @@ export function MobileNav({
               ))}
               <Link
                 href={localePath(locale, "/about")}
-                className="rounded px-3 py-2 text-sm hover:bg-white/10"
+                className="rounded px-3 py-2 text-sm hover:bg-chrome-muted"
                 onClick={() => setOpen(false)}
               >
                 {dict.nav.about}
               </Link>
               <Link
                 href={localePath(locale, "/contact")}
-                className="rounded px-3 py-2 text-sm hover:bg-white/10"
+                className="rounded px-3 py-2 text-sm hover:bg-chrome-muted"
                 onClick={() => setOpen(false)}
               >
                 {dict.nav.contact}
               </Link>
               <Link
                 href={localePath(locale, "/calendar")}
-                className="rounded px-3 py-2 text-sm hover:bg-white/10"
+                className="rounded px-3 py-2 text-sm hover:bg-chrome-muted"
                 onClick={() => setOpen(false)}
               >
                 {dict.nav.calendar}
               </Link>
               <Link
                 href={localePath(locale, "/videos")}
-                className="rounded px-3 py-2 text-sm hover:bg-white/10"
+                className="rounded px-3 py-2 text-sm hover:bg-chrome-muted"
                 onClick={() => setOpen(false)}
               >
                 {dict.nav.videos}
               </Link>
               <Link
                 href={localePath(locale, "/podcasts")}
-                className="rounded px-3 py-2 text-sm hover:bg-white/10"
+                className="rounded px-3 py-2 text-sm hover:bg-chrome-muted"
                 onClick={() => setOpen(false)}
               >
                 {dict.nav.podcasts}
               </Link>
               <Link
                 href={localePath(locale, "/search")}
-                className="rounded px-3 py-2 text-sm hover:bg-white/10"
+                className="rounded px-3 py-2 text-sm hover:bg-chrome-muted"
                 onClick={() => setOpen(false)}
               >
                 {dict.nav.search}
               </Link>
             </nav>
-            <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-4">
+            <div className="mt-4 flex items-center justify-between border-t border-chrome-border pt-4">
               <LanguageSwitch locale={locale} />
               <ThemeToggle />
             </div>

@@ -14,9 +14,10 @@ export function AdminTopbar({
   user: { name: string; email: string; role: Role };
 }) {
   const router = useRouter();
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
+  const isDark = resolvedTheme === "dark";
 
   function signOut() {
     startTransition(async () => {
@@ -39,9 +40,9 @@ export function AdminTopbar({
           variant="ghost"
           size="icon"
           aria-label="Toggle theme"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          onClick={() => setTheme(isDark ? "light" : "dark")}
         >
-          {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+          {isDark ? <Sun size={16} /> : <Moon size={16} />}
         </Button>
 
         <Button

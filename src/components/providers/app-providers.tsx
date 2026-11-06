@@ -1,14 +1,8 @@
 "use client";
 
-import { ThemeProvider } from "next-themes";
 import { SessionProvider } from "next-auth/react";
 
+/** Admin session wrapper — theme comes from the root ThemeProvider only. */
 export function AppProviders({ children }: { children: React.ReactNode }) {
-  return (
-    <SessionProvider>
-      <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-        {children}
-      </ThemeProvider>
-    </SessionProvider>
-  );
+  return <SessionProvider>{children}</SessionProvider>;
 }

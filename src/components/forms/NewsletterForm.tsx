@@ -19,7 +19,7 @@ export function NewsletterForm({
   locale?: Locale;
   compact?: boolean;
   variant?: "default" | "inline" | "stacked";
-  tone?: "default" | "onDark";
+  tone?: "default" | "onDark" | "onChrome";
 }) {
   const dict = dictProp ?? getDictionary(locale);
   const uid = useId();
@@ -74,7 +74,9 @@ export function NewsletterForm({
   const inputTone =
     tone === "onDark"
       ? "h-11 border-transparent bg-white text-[#263449] placeholder:text-[#718096]"
-      : "h-11";
+      : tone === "onChrome"
+        ? "h-11 border-chrome-border bg-background text-foreground"
+        : "h-11";
 
   return (
     <form onSubmit={onSubmit} className="relative space-y-3">
@@ -140,7 +142,7 @@ export function NewsletterForm({
               ? "text-sm text-gvn-red"
               : tone === "onDark"
                 ? "text-sm text-emerald-300"
-                : "text-sm text-emerald-700"
+                : "text-sm text-emerald-700 dark:text-emerald-400"
           }
           role="status"
         >

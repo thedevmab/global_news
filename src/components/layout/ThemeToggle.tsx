@@ -6,17 +6,17 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 export function ThemeToggle({ className }: { className?: string }) {
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-  const isDark = mounted && theme === "dark";
+  const isDark = mounted && resolvedTheme === "dark";
 
   return (
     <button
       type="button"
       aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
       className={cn(
-        "inline-flex h-9 w-9 items-center justify-center rounded-md text-white hover:bg-white/10 focus-visible:!outline-white",
+        "inline-flex h-9 w-9 items-center justify-center rounded-md text-chrome-foreground hover:bg-chrome-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         className,
       )}
       onClick={() => setTheme(isDark ? "light" : "dark")}

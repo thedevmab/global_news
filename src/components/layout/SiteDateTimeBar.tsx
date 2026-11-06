@@ -93,25 +93,25 @@ export function SiteDateTimeBar({ locale }: { locale: Locale }) {
   }, [locale]);
 
   return (
-    <div className="border-b border-white/10 bg-gvn-deep-navy text-white">
+    <div className="border-b border-chrome-border bg-chrome text-chrome-foreground">
       <div className="mx-auto flex max-w-7xl flex-col gap-0.5 px-4 py-1.5 text-[11px] leading-snug sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:text-xs">
-        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-white/90">
-          <span className="font-semibold tabular-nums tracking-wide text-white">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-chrome-foreground/90">
+          <span className="font-semibold tabular-nums tracking-wide text-chrome-foreground">
             {clock?.time ?? "—"}
           </span>
-          <span aria-hidden className="hidden text-white/35 sm:inline">
+          <span aria-hidden className="hidden text-chrome-foreground/35 sm:inline">
             |
           </span>
-          <span className="text-white/70">Addis Ababa</span>
+          <span className="text-chrome-foreground/70">Addis Ababa</span>
         </div>
         <div className="flex min-w-0 flex-col gap-0.5 sm:items-end">
-          <p className="truncate text-white/85">
+          <p className="truncate text-chrome-foreground/85">
             <span className="mr-1.5 font-semibold uppercase tracking-wider text-gvn-red">
               {locale === "am" ? "ግሪጎሪያን" : "Gregorian"}
             </span>
             {clock?.gregLabel ?? "—"}
           </p>
-          <p className="truncate text-white/85">
+          <p className="truncate text-chrome-foreground/85">
             <span className="mr-1.5 font-semibold uppercase tracking-wider text-gvn-red">
               {locale === "am" ? "ኢትዮጵያዊ" : "Ethiopian"}
             </span>

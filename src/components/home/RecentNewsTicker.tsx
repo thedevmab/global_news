@@ -30,7 +30,6 @@ export function RecentNewsTicker({
 
   const track = useMemo(() => {
     if (safeItems.length === 0) return [];
-    // Duplicate so the loop can scroll seamlessly.
     const copies = safeItems.length === 1 ? 4 : 2;
     return Array.from({ length: copies }, () => safeItems).flat();
   }, [safeItems]);
@@ -41,7 +40,7 @@ export function RecentNewsTicker({
 
   return (
     <div
-      className="border-b border-gvn-red/40 bg-gvn-deep-navy text-white"
+      className="border-b border-gvn-red/40 bg-chrome text-chrome-foreground"
       role="region"
       aria-label={label}
     >
@@ -68,11 +67,11 @@ export function RecentNewsTicker({
                     locale,
                     `/${item.categorySlug}/${item.slug}`,
                   )}
-                  className="hover:underline focus-visible:!outline-white"
+                  className="hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {item.headline}
                 </Link>
-                <span aria-hidden className="px-4 text-white/35">
+                <span aria-hidden className="px-4 text-chrome-foreground/35">
                   •
                 </span>
               </li>

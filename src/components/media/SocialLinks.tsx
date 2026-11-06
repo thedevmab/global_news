@@ -62,12 +62,12 @@ function normalizeHref(href: string): string {
 
 export function SocialLinks({
   links,
-  tone = "onDark",
+  tone = "onChrome",
   size = "md",
   className,
 }: {
   links?: Partial<SocialLinksMap> | null;
-  tone?: "onDark" | "onLight";
+  tone?: "onDark" | "onLight" | "onChrome";
   size?: "sm" | "md" | "lg";
   className?: string;
 }) {
@@ -102,8 +102,10 @@ export function SocialLinks({
               "group inline-flex items-center justify-center rounded-full border transition-all duration-300",
               box,
               tone === "onDark"
-                ? "border-white/30 bg-white/10 text-white hover:-translate-y-0.5 hover:border-gvn-red hover:bg-gvn-red hover:shadow-lg hover:shadow-gvn-red/25 focus-visible:!outline-white"
-                : "border-border bg-muted text-foreground hover:-translate-y-0.5 hover:border-gvn-red hover:bg-gvn-red hover:text-white hover:shadow-lg hover:shadow-gvn-red/20",
+                ? "border-white/30 bg-white/10 text-white hover:-translate-y-0.5 hover:border-gvn-red hover:bg-gvn-red hover:shadow-lg hover:shadow-gvn-red/25"
+                : tone === "onChrome"
+                  ? "border-chrome-border bg-chrome-muted text-chrome-foreground hover:-translate-y-0.5 hover:border-gvn-red hover:bg-gvn-red hover:text-white hover:shadow-lg hover:shadow-gvn-red/20"
+                  : "border-border bg-muted text-foreground hover:-translate-y-0.5 hover:border-gvn-red hover:bg-gvn-red hover:text-white hover:shadow-lg hover:shadow-gvn-red/20",
             )}
           >
             <Icon

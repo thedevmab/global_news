@@ -466,20 +466,20 @@ export async function HomePage({ locale }: { locale: Locale }) {
 
             <div
               id="newsletter"
-              className="scroll-mt-24 border border-border bg-gvn-navy p-5 text-white md:p-6"
+              className="scroll-mt-24 border border-border bg-surface p-5 text-surface-foreground dark:bg-inverse dark:text-inverse-foreground md:p-6"
             >
               <span aria-hidden className="mb-3 block h-0.5 w-8 bg-gvn-red" />
-              <h2 className="text-base font-bold tracking-tight">
+              <h2 className="text-base font-bold tracking-tight text-gvn-navy dark:text-white">
                 {dict.home.newsletterCardTitle}
               </h2>
-              <p className="mt-1 text-sm text-white/75">
+              <p className="mt-1 text-sm text-muted-foreground dark:text-white/75">
                 {dict.home.newsletterCardText}
               </p>
               <div className="mt-4">
                 <NewsletterForm
                   dict={dict}
                   variant="stacked"
-                  tone="onDark"
+                  tone="onChrome"
                 />
               </div>
             </div>
