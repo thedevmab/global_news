@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
+import { escapeHtml } from "@/lib/security/html";
 import { rateLimit } from "@/lib/security/rate-limit";
 import { verifyTurnstile } from "@/lib/security/turnstile";
 import { ValidationError } from "@/lib/errors";
@@ -47,7 +48,7 @@ export async function submitContactMessage(opts: {
       await sendEmail({
         to: forward,
         subject: `[GVN Contact] ${row.subject}`,
-        html: `<p><strong>From:</strong> ${row.name} &lt;${row.email}&gt;</p><p>${row.message.replace(/\n/g, "<br/>")}</p>`,
+        html: `<p><strong>From:</strong> ${escapeHtml(row.name)} &lt;${escapeHtml(row.email)}&gt;</p><p>${escapeHtml(row.message).replace(/\n/g, "<br/>")}</p>`,
         text: `From: ${row.name} <${row.email}>\n\n${row.message}`,
       });
     } catch {

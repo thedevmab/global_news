@@ -15,11 +15,13 @@ import { absoluteUrl, normalizeEmail } from "@/lib/utils";
 import { writeAudit } from "@/server/audit";
 
 function unsubscribeSigningSecret(): string {
-  return (
-    process.env.AUTH_SECRET ||
-    process.env.CRON_SECRET ||
-    "dev-newsletter-unsub-secret"
-  );
+  const secret = process.env.AUTH_SECRET || process.env.CRON_SECRET;
+  if (!secret) {
+    throw new Error(
+      "AUTH_SECRET (or CRON_SECRET) is required to sign newsletter unsubscribe links",
+    );
+  }
+  return secret;
 }
 
 /** Signed unsubscribe token that does not require storing a raw secret. */

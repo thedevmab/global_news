@@ -8,14 +8,14 @@ export async function GET(
   const { path: parts } = await ctx.params;
   const storageKey = parts.map(decodeURIComponent).join("/");
   if (
+    !storageKey ||
     storageKey.includes("..") ||
     storageKey.startsWith("/") ||
-    storageKey.includes("\\")
+    storageKey.includes("\\") ||
+    // Never open-redirect via /media/https://evil.example
+    isRemoteStorageKey(storageKey)
   ) {
     return NextResponse.json({ error: "Invalid path" }, { status: 400 });
-  }
-  if (isRemoteStorageKey(storageKey)) {
-    return NextResponse.redirect(storageKey, 302);
   }
   try {
     const { buffer, contentType } = await getStorage().read(storageKey);

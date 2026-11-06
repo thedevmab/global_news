@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
 import { getDictionary, localePath } from "@/i18n";
+import { sanitizeSearchHighlight } from "@/lib/security/html";
 import {
   getActiveCategories,
   searchArticles,
@@ -93,12 +94,16 @@ export default async function Page({ searchParams }: Props) {
                   className="font-serif text-xl font-semibold hover:text-gvn-red"
                 >
                   <span
-                    dangerouslySetInnerHTML={{ __html: item.headline_hl }}
+                    dangerouslySetInnerHTML={{
+                      __html: sanitizeSearchHighlight(item.headline_hl),
+                    }}
                   />
                 </Link>
                 <p
                   className="mt-2 text-sm text-muted-foreground"
-                  dangerouslySetInnerHTML={{ __html: item.summary_hl }}
+                  dangerouslySetInnerHTML={{
+                    __html: sanitizeSearchHighlight(item.summary_hl),
+                  }}
                 />
               </li>
             ))}

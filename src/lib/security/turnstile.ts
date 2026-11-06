@@ -13,17 +13,13 @@ export async function verifyTurnstile(
   remoteIp?: string | null,
 ): Promise<TurnstileVerifyResult> {
   const secret = process.env.TURNSTILE_SECRET_KEY;
-  const isDev =
-    process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test";
 
   if (!secret) {
-    if (isDev) {
-      logger.warn("turnstile.bypass", {
-        reason: "TURNSTILE_SECRET_KEY missing in development/test",
-      });
-      return { ok: true, bypassed: true };
-    }
-    return { ok: false, error: "CAPTCHA is not configured" };
+    // Allow contact/newsletter without CAPTCHA until Turnstile is configured.
+    logger.warn("turnstile.bypass", {
+      reason: "TURNSTILE_SECRET_KEY missing",
+    });
+    return { ok: true, bypassed: true };
   }
 
   if (!token || !token.trim()) {

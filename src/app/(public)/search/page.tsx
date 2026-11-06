@@ -3,6 +3,7 @@ import { searchArticles, getActiveCategories } from "@/server/articles/public";
 import { Pagination } from "@/components/ui/pagination";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getDictionary } from "@/i18n";
+import { sanitizeSearchHighlight } from "@/lib/security/html";
 
 export const metadata = { title: "Search" };
 
@@ -107,7 +108,9 @@ export default async function SearchPage({
                 </p>
                 <p
                   className="mt-2 text-sm"
-                  dangerouslySetInnerHTML={{ __html: item.snippet }}
+                  dangerouslySetInnerHTML={{
+                    __html: sanitizeSearchHighlight(item.snippet),
+                  }}
                 />
               </li>
             ))}

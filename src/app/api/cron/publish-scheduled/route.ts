@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { timingSafeEqualString } from "@/lib/security/tokens";
-import { prisma } from "@/lib/db";
 import { ArticleStatus } from "@prisma/client";
+import { prisma } from "@/lib/db";
+import { timingSafeEqualString } from "@/lib/security/tokens";
 
 export async function POST(req: Request) {
   const secret = process.env.CRON_SECRET || "";
@@ -11,21 +11,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const due = await prisma.$queryRaw<{ id: string }[]>`
-    SELECT id FROM "Article"
-    WHERE status = 'SCHEDULED'
-      AND "deletedAt" IS NULL
-      AND "scheduledAt" IS NOT NULL
-      AND "scheduledAt" <= NOW()
-    FOR UPDATE SKIP LOCKED
-    LIMIT 50
-  `;
+  // Keep FOR UPDATE SKIP LOCKED inside the transaction so locks are held.
+  const published = await prisma.$transaction(async (tx) => {
+    const due = await tx.$queryRaw<{ id: string }[]>`
+      SELECT id FROM "Article"
+      WHERE status = 'SCHEDULED'
+        AND "deletedAt" IS NULL
+        AND "scheduledAt" IS NOT NULL
+        AND "scheduledAt" <= NOW()
+      ORDER BY "scheduledAt" ASC
+      FOR UPDATE SKIP LOCKED
+      LIMIT 50
+    `;
 
-  let published = 0;
-  for (const row of due) {
-    await prisma.$transaction(async (tx) => {
+    let count = 0;
+    for (const row of due) {
       const article = await tx.article.findUnique({ where: { id: row.id } });
-      if (!article || article.status !== ArticleStatus.SCHEDULED) return;
+      if (!article || article.status !== ArticleStatus.SCHEDULED) continue;
       await tx.article.update({
         where: { id: article.id },
         data: {
@@ -51,9 +53,10 @@ export async function POST(req: Request) {
           entityId: article.id,
         },
       });
-      published += 1;
-    });
-  }
+      count += 1;
+    }
+    return { published: count, checked: due.length };
+  });
 
-  return NextResponse.json({ published, checked: due.length });
+  return NextResponse.json(published);
 }

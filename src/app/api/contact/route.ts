@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { rateLimit } from "@/lib/security/rate-limit";
-import { isAppError } from "@/lib/errors";
 import { sendEmail } from "@/lib/email";
+import { isAppError } from "@/lib/errors";
+import { escapeHtml } from "@/lib/security/html";
+import { rateLimit } from "@/lib/security/rate-limit";
+import { verifyTurnstile } from "@/lib/security/turnstile";
 
 const schema = z.object({
   name: z.string().trim().min(1).max(120),
@@ -11,6 +13,7 @@ const schema = z.object({
   subject: z.string().trim().min(1).max(200),
   message: z.string().trim().min(1).max(5000),
   website: z.string().max(200).optional(),
+  turnstileToken: z.string().optional(),
 });
 
 function clientIp(req: Request): string {
@@ -46,6 +49,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true });
     }
 
+    const captcha = await verifyTurnstile(parsed.data.turnstileToken, ip);
+    if (!captcha.ok) {
+      return NextResponse.json({ error: captcha.error }, { status: 400 });
+    }
+
     await prisma.contactMessage.create({
       data: {
         name: parsed.data.name,
@@ -58,10 +66,14 @@ export async function POST(req: Request) {
 
     const forward = process.env.CONTACT_FORWARD_EMAIL;
     if (forward) {
+      const name = escapeHtml(parsed.data.name);
+      const email = escapeHtml(parsed.data.email);
+      const subject = escapeHtml(parsed.data.subject);
+      const message = escapeHtml(parsed.data.message).replace(/\n/g, "<br/>");
       await sendEmail({
         to: forward,
         subject: `[GVN Contact] ${parsed.data.subject}`,
-        html: `<p><strong>From:</strong> ${parsed.data.name} &lt;${parsed.data.email}&gt;</p><p>${parsed.data.message.replace(/\n/g, "<br/>")}</p>`,
+        html: `<p><strong>From:</strong> ${name} &lt;${email}&gt;</p><p><strong>Subject:</strong> ${subject}</p><p>${message}</p>`,
         text: `${parsed.data.name} <${parsed.data.email}>\n\n${parsed.data.message}`,
       }).catch(() => undefined);
     }

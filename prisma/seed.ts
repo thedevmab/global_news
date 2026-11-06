@@ -49,12 +49,6 @@ function articleDoc(paragraphs: string[]) {
 }
 
 async function ensureSuperAdmin() {
-  const email =
-    process.env.INITIAL_ADMIN_EMAIL?.trim() || "admin@example.com";
-  const password =
-    process.env.INITIAL_ADMIN_PASSWORD || "ChangeMeImmediately1";
-  const name = process.env.INITIAL_ADMIN_NAME || "GVN Super Admin";
-
   const existingSuper = await prisma.user.findFirst({
     where: { role: Role.SUPER_ADMIN, deletedAt: null },
     include: { authorProfile: true },
@@ -76,6 +70,18 @@ async function ensureSuperAdmin() {
       });
     }
     return existingSuper;
+  }
+
+  const email = process.env.INITIAL_ADMIN_EMAIL?.trim();
+  const password = process.env.INITIAL_ADMIN_PASSWORD;
+  const name = process.env.INITIAL_ADMIN_NAME || "GVN Super Admin";
+
+  // Never invent a default production password.
+  if (!email || !password) {
+    console.warn(
+      "Seed: no Super Admin found and INITIAL_ADMIN_EMAIL/PASSWORD are unset. Skipping admin bootstrap (use npm run setup:admin).",
+    );
+    return null;
   }
 
   const emailNormalized = email.toLowerCase();
@@ -102,7 +108,7 @@ async function ensureSuperAdmin() {
 }
 
 async function ensureStarterArticles(
-  admin: Awaited<ReturnType<typeof ensureSuperAdmin>>,
+  admin: NonNullable<Awaited<ReturnType<typeof ensureSuperAdmin>>>,
 ) {
   const publishedCount = await prisma.article.count({
     where: { status: ArticleStatus.PUBLISHED, deletedAt: null },
@@ -361,10 +367,12 @@ async function main() {
   }
 
   const admin = await ensureSuperAdmin();
-  await ensureStarterArticles(admin);
+  if (admin) {
+    await ensureStarterArticles(admin);
+  }
 
   console.log(
-    "Seed completed: categories, settings, ad slots, pages, navigation, admin, starter articles.",
+    "Seed completed: categories, settings, ad slots, pages, navigation, admin (if configured), starter articles.",
   );
 }
 

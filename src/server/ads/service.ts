@@ -2,6 +2,7 @@ import { AdSlotKey } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requirePermission, type AuthUser } from "@/lib/rbac";
 import { NotFoundError } from "@/lib/errors";
+import { isSafePublicUrl } from "@/lib/security/html";
 import { writeAudit } from "@/server/audit";
 import { z } from "zod";
 
@@ -37,13 +38,9 @@ export async function ensurePrimaryAdSlots() {
 const mediaOrUrl = z
   .string()
   .trim()
-  .refine(
-    (value) =>
-      value === "" ||
-      value.startsWith("/") ||
-      /^https?:\/\//i.test(value),
-    { message: "Image must be a URL or /media path" },
-  );
+  .refine((value) => value === "" || isSafePublicUrl(value), {
+    message: "Image must be an http(s) URL or a same-origin path",
+  });
 
 const adSchema = z.object({
   slotId: z.string().uuid(),
@@ -52,13 +49,9 @@ const adSchema = z.object({
   destinationUrl: z
     .string()
     .trim()
-    .refine(
-      (value) =>
-        value === "" ||
-        value.startsWith("/") ||
-        /^https?:\/\//i.test(value),
-      { message: "Destination must be a URL or site path" },
-    )
+    .refine((value) => value === "" || isSafePublicUrl(value), {
+      message: "Destination must be an http(s) URL or a same-origin path",
+    })
     .optional()
     .nullable()
     .or(z.literal("")),
