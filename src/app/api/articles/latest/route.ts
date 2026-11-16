@@ -20,5 +20,12 @@ export async function GET(req: Request) {
     excludeIds: exclude,
   });
 
-  return NextResponse.json(result);
+  const res = NextResponse.json(result);
+  if (exclude.length === 0) {
+    res.headers.set(
+      "Cache-Control",
+      "public, s-maxage=30, stale-while-revalidate=120",
+    );
+  }
+  return res;
 }

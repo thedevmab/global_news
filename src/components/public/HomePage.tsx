@@ -1,18 +1,16 @@
 import Image from "next/image";
 import Link from "next/link";
-import { format } from "date-fns";
-import { Play } from "lucide-react";
+import { Suspense } from "react";
 import { ArticleCard } from "@/components/article/ArticleCard";
 import { HomeHero } from "@/components/home/HomeHero";
+import { HomeMediaSection } from "@/components/home/HomeMediaSection";
 import { LoadMoreArticles } from "@/components/home/LoadMoreArticles";
 import { RecentNewsTicker } from "@/components/home/RecentNewsTicker";
 import { TopStoriesBand } from "@/components/home/TopStoriesBand";
-import { NewsletterForm } from "@/components/forms/NewsletterForm";
 import { AdSlot } from "@/components/media/AdSlot";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getDictionary, localePath, type Locale } from "@/i18n";
 import { categoryBlurb } from "@/lib/category-blurb";
-import { getChannelVideos } from "@/lib/youtube";
 import { editorial, editorialFallback } from "@/lib/editorial-images";
 import { mediaUrl } from "@/lib/media-url";
 import { parseSiteSettings } from "@/lib/site-settings";
@@ -23,8 +21,6 @@ import {
   getHomepageLeadAndSecondary,
   getSiteSettingsRow,
   listLatestArticles,
-  listPublishedPodcasts,
-  listPublishedVideos,
   listRecentHeadlines,
 } from "@/server/articles/public";
 import type { ArticleCardData } from "@/server/articles/public";
@@ -47,7 +43,7 @@ function SectionHeading({
   id: string;
   title: string;
   href?: string;
-  label: string;
+  label?: string;
 }) {
   return (
     <div className="mb-5 flex items-end justify-between gap-3 border-b border-border pb-3">
@@ -60,7 +56,7 @@ function SectionHeading({
           {title}
         </h2>
       </div>
-      {href ? (
+      {href && label ? (
         <Link
           href={href}
           className="shrink-0 pb-0.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-gvn-red"
@@ -79,9 +75,6 @@ export async function HomePage({ locale }: { locale: Locale }) {
     latest,
     recentHeadlines,
     sections,
-    videos,
-    channelVideos,
-    podcasts,
     settingsRow,
     categories,
   ] = await Promise.all([
@@ -91,9 +84,6 @@ export async function HomePage({ locale }: { locale: Locale }) {
     listLatestArticles({ page: 1, pageSize: LATEST_PAGE_SIZE }),
     listRecentHeadlines({ hours: 12, limit: 20 }),
     getHomepageCategorySections(locale, 1),
-    listPublishedVideos({ page: 1, pageSize: 1, language: locale }),
-    getChannelVideos().catch(() => []),
-    listPublishedPodcasts({ page: 1, pageSize: 3, language: locale }),
     getSiteSettingsRow(),
     getActiveCategories(),
   ]);
@@ -171,12 +161,8 @@ export async function HomePage({ locale }: { locale: Locale }) {
   }
 
   const hasArticles = Boolean(heroLead || latest.items.length > 0);
-  const channelVideo = channelVideos[0] ?? null;
-  const archiveVideo = videos.items[0] ?? null;
-  const hasMedia =
-    Boolean(channelVideo || archiveVideo) || podcasts.items.length > 0;
 
-  if (!hasArticles && !hasMedia) {
+  if (!hasArticles) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-20">
         <h1 className="sr-only">{dict.siteName}</h1>
@@ -185,13 +171,14 @@ export async function HomePage({ locale }: { locale: Locale }) {
           description={dict.home.emptyDescription}
           className="border-solid border-gvn-navy/10 bg-card shadow-sm"
         />
+        <div className="mt-10">
+          <Suspense fallback={null}>
+            <HomeMediaSection locale={locale} />
+          </Suspense>
+        </div>
       </div>
     );
   }
-
-  const mediaColumns =
-    (channelVideo || archiveVideo ? 1 : 0) +
-    (podcasts.items.length > 0 ? 1 : 0);
 
   return (
     <div>
@@ -215,7 +202,9 @@ export async function HomePage({ locale }: { locale: Locale }) {
       ) : null}
 
       <div className="mx-auto max-w-7xl space-y-12 px-4 py-8 md:py-10">
-        <AdSlot slotKey="MIDDLE" />
+        <Suspense fallback={null}>
+          <AdSlot slotKey="MIDDLE" />
+        </Suspense>
 
         {latestRows.length > 0 || tiles.length > 0 ? (
           <section
@@ -231,7 +220,7 @@ export async function HomePage({ locale }: { locale: Locale }) {
                 <SectionHeading
                   id="latest-heading"
                   title={dict.home.latest}
-                  href={localePath(locale, "/search")}
+                  href={localePath(locale, "/news")}
                   label={dict.home.viewAll}
                 />
                 <div className="divide-y divide-border">
@@ -263,8 +252,6 @@ export async function HomePage({ locale }: { locale: Locale }) {
                 <SectionHeading
                   id="categories-heading"
                   title={dict.home.featuredCategories}
-                  href="#footer-categories"
-                  label={dict.home.viewAll}
                 />
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {tiles.map((tile, index) => (
@@ -342,151 +329,9 @@ export async function HomePage({ locale }: { locale: Locale }) {
       </section>
 
       <div className="mx-auto max-w-7xl px-4 py-10 md:py-12">
-        {mediaColumns === 0 ? (
-          <section
-            id="newsletter"
-            className="scroll-mt-24 flex w-full flex-col gap-6 border border-border bg-gvn-light-gray/60 p-6 dark:bg-muted/40 md:flex-row md:items-center md:justify-between md:gap-10 md:p-8"
-          >
-            <div className="max-w-md">
-              <span aria-hidden className="mb-2 block h-0.5 w-8 bg-gvn-red" />
-              <h2 className="text-xl font-bold tracking-tight text-gvn-navy dark:text-white">
-                {dict.home.newsletterCardTitle}
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {dict.home.newsletterCardText}
-              </p>
-            </div>
-            <div className="w-full min-w-0 md:max-w-sm md:shrink-0">
-              <NewsletterForm dict={dict} variant="inline" />
-            </div>
-          </section>
-        ) : (
-          <section
-            className={cn(
-              "grid items-start gap-8 md:gap-10",
-              mediaColumns === 2 && "lg:grid-cols-3",
-              mediaColumns === 1 && "lg:grid-cols-2",
-            )}
-          >
-            {channelVideo || archiveVideo ? (
-              <div>
-                <SectionHeading
-                  id="videos-heading"
-                  title={dict.home.featuredVideos}
-                  href={localePath(locale, "/videos")}
-                  label={dict.home.viewAll}
-                />
-                <Link
-                  href={localePath(
-                    locale,
-                    `/videos/${channelVideo ? channelVideo.id : archiveVideo!.slug}`,
-                  )}
-                  className="group block"
-                >
-                  <span className="gvn-media relative block aspect-video bg-gvn-navy">
-                    <Image
-                      src={
-                        channelVideo ? channelVideo.thumbnailUrl : editorial.city
-                      }
-                      alt=""
-                      fill
-                      className="object-cover transition-transform duration-700 group-hover:scale-[1.04]"
-                      sizes="(max-width: 1024px) 100vw, 360px"
-                    />
-                    <span className="absolute inset-0 bg-gradient-to-t from-gvn-deep-navy/55 via-transparent to-transparent" />
-                    <span className="absolute bottom-3 left-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-gvn-navy">
-                      <Play className="h-4 w-4 fill-current" aria-hidden />
-                    </span>
-                  </span>
-                  <span className="mt-3 block text-sm font-semibold leading-snug text-foreground group-hover:text-gvn-red">
-                    {channelVideo ? channelVideo.title : archiveVideo!.title}
-                  </span>
-                  {channelVideo?.publishedAt || archiveVideo?.publishedAt ? (
-                    <time
-                      dateTime={
-                        channelVideo
-                          ? channelVideo.publishedAt
-                          : archiveVideo!.publishedAt!.toISOString()
-                      }
-                      className="mt-1 block text-xs text-muted-foreground"
-                    >
-                      {format(
-                        channelVideo
-                          ? new Date(channelVideo.publishedAt)
-                          : archiveVideo!.publishedAt!,
-                        "MMM d, yyyy",
-                      )}
-                    </time>
-                  ) : null}
-                </Link>
-              </div>
-            ) : null}
-
-            {podcasts.items.length > 0 ? (
-              <div>
-                <SectionHeading
-                  id="podcasts-heading"
-                  title={dict.home.featuredPodcasts}
-                  href={localePath(locale, "/podcasts")}
-                  label={dict.home.viewAll}
-                />
-                <ul className="divide-y divide-border border-y border-border">
-                  {podcasts.items.map((podcast) => (
-                    <li key={podcast.id}>
-                      <Link
-                        href={localePath(locale, `/podcasts/${podcast.slug}`)}
-                        className="flex items-center gap-3 py-3.5 hover:text-gvn-red"
-                      >
-                        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center border border-gvn-navy/20 text-gvn-navy dark:border-white/20 dark:text-white">
-                          <Play
-                            className="h-3.5 w-3.5 fill-current"
-                            aria-hidden
-                          />
-                        </span>
-                        <span className="min-w-0">
-                          <span className="block truncate text-sm font-semibold">
-                            {podcast.title}
-                          </span>
-                          <span className="mt-0.5 block text-xs text-muted-foreground">
-                            {podcast.episodeNumber != null
-                              ? locale === "am"
-                                ? `ክፍል ${podcast.episodeNumber}`
-                                : `Episode ${podcast.episodeNumber}`
-                              : dict.nav.podcasts}
-                            {podcast.publishedAt
-                              ? ` · ${format(podcast.publishedAt, "MMM d, yyyy")}`
-                              : ""}
-                          </span>
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-
-            <div
-              id="newsletter"
-              className="scroll-mt-24 border border-border bg-surface p-5 text-surface-foreground dark:bg-inverse dark:text-inverse-foreground md:p-6"
-            >
-              <span aria-hidden className="mb-3 block h-0.5 w-8 bg-gvn-red" />
-              <h2 className="text-base font-bold tracking-tight text-gvn-navy dark:text-white">
-                {dict.home.newsletterCardTitle}
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground dark:text-white/75">
-                {dict.home.newsletterCardText}
-              </p>
-              <div className="mt-4">
-                <NewsletterForm
-                  dict={dict}
-                  variant="stacked"
-                  tone="onChrome"
-                />
-              </div>
-            </div>
-          </section>
-        )}
-
+        <Suspense fallback={null}>
+          <HomeMediaSection locale={locale} />
+        </Suspense>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { Calendar } from "lucide-react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
+import { HeaderSearch } from "@/components/search/HeaderSearch";
 import { getDictionary, localePath, type Locale } from "@/i18n";
 import { getActiveCategories } from "@/server/articles/public";
 import { LanguageSwitch } from "./LanguageSwitch";
@@ -42,7 +43,11 @@ export async function Header({ locale }: { locale: Locale }) {
   const moreItems: NavLinkItem[] = [
     ...categoryLinks.slice(6),
     { href: localePath(locale, "/calendar"), label: dict.nav.calendar },
-    { href: localePath(locale, "/videos"), label: dict.nav.videos },
+    {
+      href: localePath(locale, "/videos"),
+      label: dict.nav.videos,
+      icon: "youtube",
+    },
     { href: localePath(locale, "/podcasts"), label: dict.nav.podcasts },
   ];
 
@@ -66,12 +71,17 @@ export async function Header({ locale }: { locale: Locale }) {
 
         <div className="ml-auto flex items-center gap-1">
           <Link
-            href={localePath(locale, "/search")}
+            href={localePath(locale, "/calendar")}
             className={iconBtn}
-            aria-label={dict.nav.search}
+            aria-label={dict.nav.calendar}
           >
-            <Search className="h-4 w-4" />
+            <Calendar className="h-4 w-4" />
           </Link>
+          <HeaderSearch
+            locale={locale}
+            placeholder={dict.search.placeholder}
+            label={dict.nav.search}
+          />
           <div className="hidden items-center gap-2 pl-1 lg:flex">
             <LanguageSwitch locale={locale} />
             <ThemeToggle />

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { requirePermission, type AuthUser } from "@/lib/rbac";
 import { ValidationError } from "@/lib/errors";
 import { writeAudit } from "@/server/audit";
+import { invalidate, tags } from "@/server/cache";
 import { z } from "zod";
 
 const homepageSchema = z.object({
@@ -62,6 +63,7 @@ export async function updateHomepageLayout(user: AuthUser, input: unknown) {
     action: "homepage.update",
     entityType: "HomepageSlot",
   });
+  invalidate(tags.homepage, tags.articles);
 
   return getHomepageLayout();
 }
@@ -108,6 +110,7 @@ export async function createBreakingItem(user: AuthUser, input: unknown) {
     entityType: "BreakingNewsItem",
     entityId: item.id,
   });
+  invalidate(tags.breaking, tags.articles, tags.homepage);
   return item;
 }
 
@@ -128,6 +131,7 @@ export async function updateBreakingItem(
     entityType: "BreakingNewsItem",
     entityId: id,
   });
+  invalidate(tags.breaking, tags.articles, tags.homepage);
   return item;
 }
 
@@ -140,4 +144,5 @@ export async function deleteBreakingItem(user: AuthUser, id: string) {
     entityType: "BreakingNewsItem",
     entityId: id,
   });
+  invalidate(tags.breaking, tags.articles, tags.homepage);
 }

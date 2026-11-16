@@ -1,3 +1,5 @@
+import { connection } from "next/server";
+
 export const metadata = { title: "Unsubscribe", robots: { index: false } };
 
 export default async function UnsubscribePage({
@@ -5,6 +7,7 @@ export default async function UnsubscribePage({
 }: {
   searchParams: Promise<{ ok?: string; token?: string }>;
 }) {
+  await connection();
   const sp = await searchParams;
   // GET /api/newsletter/unsubscribe?token= redirects here with ok=
   // Also support token on this page via form

@@ -1,15 +1,37 @@
-﻿import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
+﻿import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/auth";
+import { requirePermission } from "@/lib/rbac";
+import { listCategories } from "@/server/categories/service";
+import {
+  CategoriesManager,
+  type CategoryRow,
+} from "@/components/admin/CategoriesManager";
 
-export default async function AdminPage() {
-  const session = await auth();
-  if (!session?.user) redirect("/login");
-  return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Categories</h1>
-      <p className="text-sm text-muted-foreground">
-        Manage categories. Data is loaded from PostgreSQL via admin services.
-      </p>
-    </div>
-  );
+export const metadata = { title: "Categories" };
+
+export default async function CategoriesAdminPage() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  try {
+    requirePermission(user, "category:manage");
+  } catch {
+    redirect("/admin");
+  }
+
+  const categories = await listCategories();
+  const items: CategoryRow[] = categories.map((c) => ({
+    id: c.id,
+    nameEn: c.nameEn,
+    nameAm: c.nameAm,
+    slug: c.slug,
+    description: c.description,
+    color: c.color,
+    parentId: c.parentId,
+    parentName: c.parent?.nameEn ?? null,
+    sortOrder: c.sortOrder,
+    isActive: c.isActive,
+    articleCount: c._count.articles,
+  }));
+
+  return <CategoriesManager items={items} />;
 }

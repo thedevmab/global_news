@@ -3,6 +3,7 @@ import { requirePermission, type AuthUser } from "@/lib/rbac";
 import { NotFoundError } from "@/lib/errors";
 import { slugify } from "@/lib/utils";
 import { writeAudit } from "@/server/audit";
+import { invalidate, tags } from "@/server/cache";
 import { z } from "zod";
 
 const authorSchema = z.object({
@@ -51,6 +52,7 @@ export async function createAuthor(user: AuthUser, input: unknown) {
     entityType: "AuthorProfile",
     entityId: author.id,
   });
+  invalidate(tags.authors, tags.articles);
   return author;
 }
 
@@ -79,6 +81,7 @@ export async function updateAuthor(
     entityType: "AuthorProfile",
     entityId: id,
   });
+  invalidate(tags.authors, tags.articles);
   return author;
 }
 
@@ -91,4 +94,5 @@ export async function deleteAuthor(user: AuthUser, id: string) {
     entityType: "AuthorProfile",
     entityId: id,
   });
+  invalidate(tags.authors, tags.articles);
 }

@@ -4,6 +4,7 @@ import { requirePermission, type AuthUser } from "@/lib/rbac";
 import { NotFoundError } from "@/lib/errors";
 import { isSafePublicUrl } from "@/lib/security/html";
 import { writeAudit } from "@/server/audit";
+import { invalidate, tags } from "@/server/cache";
 import { z } from "zod";
 
 const PRIMARY_SLOT_META: { key: AdSlotKey; name: string; description: string }[] =
@@ -91,6 +92,7 @@ export async function createAdvertisement(user: AuthUser, input: unknown) {
     entityType: "Advertisement",
     entityId: ad.id,
   });
+  invalidate(tags.ads);
   return ad;
 }
 
@@ -118,6 +120,7 @@ export async function updateAdvertisement(
     entityType: "Advertisement",
     entityId: id,
   });
+  invalidate(tags.ads);
   return ad;
 }
 
@@ -130,4 +133,5 @@ export async function deleteAdvertisement(user: AuthUser, id: string) {
     entityType: "Advertisement",
     entityId: id,
   });
+  invalidate(tags.ads);
 }

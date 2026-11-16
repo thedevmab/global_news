@@ -352,7 +352,7 @@ export function ArticleEditor({
           <button
             key={btn.label}
             type="button"
-            className="rounded border border-border bg-background px-2 py-1 text-xs font-semibold hover:bg-muted disabled:opacity-50"
+            className="inline-flex min-h-10 min-w-10 items-center justify-center rounded border border-border bg-background px-2 py-1 text-xs font-semibold hover:bg-muted disabled:opacity-50"
             onClick={btn.action}
             disabled={btn.label === "…" || (btn.label === "Image" && imageUploading)}
           >
@@ -367,39 +367,54 @@ export function ArticleEditor({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
           <h1 className="font-serif text-2xl font-semibold">
             {mode === "create" ? "New article" : "Edit article"}
           </h1>
           <Badge variant="muted">{status.replace("_", " ")}</Badge>
           {dirty ? <Badge variant="warning">Unsaved</Badge> : null}
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto">
           {articleId ? (
             <>
-              <Button type="button" variant="outline" onClick={preview}>
+              <Button
+                type="button"
+                variant="outline"
+                className="min-h-10 grow sm:grow-0"
+                onClick={preview}
+              >
                 Preview
               </Button>
               <Button
                 type="button"
                 variant="outline"
+                className="min-h-10 grow sm:grow-0"
                 onClick={() => router.push(`/admin/articles/${articleId}/revisions`)}
               >
                 Revisions
               </Button>
               {status === "DRAFT" && !canPublish ? (
-                <Button type="button" onClick={() => transition("IN_REVIEW")}>
+                <Button
+                  type="button"
+                  className="min-h-10 grow sm:grow-0"
+                  onClick={() => transition("IN_REVIEW")}
+                >
                   Submit review
                 </Button>
               ) : null}
               {status === "IN_REVIEW" ? (
                 <>
-                  <Button type="button" onClick={() => transition("APPROVED")}>
+                  <Button
+                    type="button"
+                    className="min-h-10 grow sm:grow-0"
+                    onClick={() => transition("APPROVED")}
+                  >
                     Approve
                   </Button>
                   <Button
                     type="button"
                     variant="outline"
+                    className="min-h-10 grow sm:grow-0"
                     onClick={() => {
                       const reason = window.prompt("Return reason");
                       if (reason) transition("DRAFT", reason);
@@ -416,6 +431,7 @@ export function ArticleEditor({
                 <Button
                   type="button"
                   variant="accent"
+                  className="min-h-10 grow sm:grow-0"
                   onClick={() => transition("PUBLISHED")}
                   disabled={pending}
                 >
@@ -425,13 +441,22 @@ export function ArticleEditor({
               {canPublish &&
               (status === "DRAFT" || status === "APPROVED") &&
               scheduledAt ? (
-                <Button type="button" onClick={() => transition("SCHEDULED")}>
+                <Button
+                  type="button"
+                  className="min-h-10 grow sm:grow-0"
+                  onClick={() => transition("SCHEDULED")}
+                >
                   Schedule
                 </Button>
               ) : null}
             </>
           ) : null}
-          <Button type="button" onClick={save} disabled={pending}>
+          <Button
+            type="button"
+            className="min-h-10 grow sm:grow-0"
+            onClick={save}
+            disabled={pending}
+          >
             {pending ? "Saving…" : "Save"}
           </Button>
         </div>
@@ -466,7 +491,7 @@ export function ArticleEditor({
             <Label>
               Body <span className="text-gvn-red">*</span>
             </Label>
-            <div className="overflow-hidden rounded-md border border-border bg-background">
+            <div className="min-w-0 overflow-x-auto rounded-md border border-border bg-background">
               <input
                 ref={imageFileRef}
                 type="file"
@@ -477,7 +502,7 @@ export function ArticleEditor({
               {toolbar}
               <EditorContent
                 editor={editor}
-                className="prose-article min-h-[360px] px-4 py-3 focus-within:outline-none [&_.tiptap]:min-h-[340px] [&_.tiptap]:outline-none"
+                className="prose-article min-h-[360px] min-w-0 px-4 py-3 focus-within:outline-none [&_.tiptap]:min-h-[340px] [&_.tiptap]:outline-none"
               />
             </div>
           </div>

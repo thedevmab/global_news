@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { requirePermission, type AuthUser } from "@/lib/rbac";
+import { invalidate, tags } from "@/server/cache";
 import { z } from "zod";
 
 export const siteSettingsSchema = z.object({
@@ -60,5 +61,6 @@ export async function updateSiteSettings(
       entityId: "default",
     },
   });
+  invalidate(tags.settings);
   return data;
 }

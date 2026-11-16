@@ -34,13 +34,13 @@ export default async function AdminDashboardPage() {
         </p>
       </div>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <section className="grid grid-cols-1 gap-4 min-[380px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {cards.map((card) => (
           <div
             key={card.label}
             className="border border-border bg-background p-4"
           >
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground break-words">
               {card.label}
             </p>
             <p className="mt-2 text-3xl font-semibold tabular-nums text-gvn-navy dark:text-foreground">
@@ -51,9 +51,9 @@ export default async function AdminDashboardPage() {
       </section>
 
       {views ? (
-        <section className="grid gap-4 sm:grid-cols-2">
+        <section className="grid grid-cols-1 gap-4 min-[380px]:grid-cols-2">
           <div className="border border-border bg-background p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground break-words">
               Views · last 7 days
             </p>
             <p className="mt-2 text-2xl font-semibold tabular-nums">
@@ -61,7 +61,7 @@ export default async function AdminDashboardPage() {
             </p>
           </div>
           <div className="border border-border bg-background p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground break-words">
               Views · last 30 days
             </p>
             <p className="mt-2 text-2xl font-semibold tabular-nums">
@@ -71,7 +71,7 @@ export default async function AdminDashboardPage() {
         </section>
       ) : null}
 
-      <section className="grid gap-6 lg:grid-cols-3">
+      <section className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
         <TaskList
           title="My drafts"
           empty="No drafts yet"
@@ -121,13 +121,15 @@ function TaskList({
                 href={`/admin/articles/${item.id}/edit`}
                 className="flex items-start justify-between gap-3 px-4 py-3 hover:bg-muted/50"
               >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{item.headline}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="break-words text-sm font-medium">{item.headline}</p>
                   <p className="text-xs text-muted-foreground">
                     {formatDistanceToNow(item.updatedAt, { addSuffix: true })}
                   </p>
                 </div>
-                <Badge variant="muted">{item.status.replace("_", " ")}</Badge>
+                <Badge variant="muted" className="shrink-0">
+                  {item.status.replace("_", " ")}
+                </Badge>
               </Link>
             </li>
           ))}

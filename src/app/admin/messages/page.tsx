@@ -46,7 +46,7 @@ export default async function AdminContactPage({
         <select
           name="status"
           defaultValue={status || ""}
-          className="h-10 rounded-md border border-border bg-background px-3 text-sm"
+          className="h-10 w-full min-w-0 rounded-md border border-border bg-background px-3 text-sm sm:w-auto"
         >
           <option value="">All statuses</option>
           {Object.values(ContactStatus).map((s) => (
@@ -55,7 +55,7 @@ export default async function AdminContactPage({
             </option>
           ))}
         </select>
-        <Button type="submit" variant="outline">
+        <Button type="submit" variant="outline" className="w-full sm:w-auto">
           Filter
         </Button>
         {status ? (

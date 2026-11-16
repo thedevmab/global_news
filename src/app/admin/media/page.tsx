@@ -54,11 +54,11 @@ export default async function AdminMediaPage({
           name="q"
           defaultValue={q ?? ""}
           placeholder="Search by name or alt text"
-          className="h-10 min-w-[220px] flex-1 rounded-md border border-border bg-background px-3 text-sm"
+          className="h-10 w-full min-w-0 flex-1 rounded-md border border-border bg-background px-3 text-sm sm:min-w-[12rem]"
         />
         <button
           type="submit"
-          className="h-10 rounded-md border border-border bg-background px-4 text-sm font-medium hover:bg-muted"
+          className="h-10 w-full rounded-md border border-border bg-background px-4 text-sm font-medium hover:bg-muted sm:w-auto"
         >
           Search
         </button>

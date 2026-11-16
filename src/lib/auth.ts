@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import { cache } from "react";
 import { prisma } from "@/lib/db";
 import { verifyPassword } from "@/lib/security/password";
 import { generateToken, hashToken } from "@/lib/security/tokens";
@@ -11,6 +12,12 @@ import {
   isAccountLocked,
   recordFailedLogin,
 } from "@/server/auth/lockout";
+import {
+  shouldTouchSession,
+  TOUCH_INTERVAL_MS,
+} from "@/lib/session-touch";
+
+export { shouldTouchSession, TOUCH_INTERVAL_MS };
 
 const SESSION_INACTIVITY_MS = 8 * 60 * 60 * 1000;
 
@@ -147,7 +154,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return {};
       }
 
-      const inactiveMs = Date.now() - session.lastActiveAt.getTime();
+      const now = Date.now();
+      const inactiveMs = now - session.lastActiveAt.getTime();
       if (inactiveMs > SESSION_INACTIVITY_MS) {
         await prisma.session.update({
           where: { id: session.id },
@@ -156,13 +164,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return {};
       }
 
-      await prisma.session.update({
-        where: { id: session.id },
-        data: {
-          lastActiveAt: new Date(),
-          expiresAt: new Date(Date.now() + SESSION_INACTIVITY_MS),
-        },
-      });
+      if (shouldTouchSession(session.lastActiveAt, now)) {
+        const touchBefore = new Date(now - TOUCH_INTERVAL_MS);
+        await prisma.session.updateMany({
+          where: {
+            id: session.id,
+            lastActiveAt: { lt: touchBefore },
+          },
+          data: {
+            lastActiveAt: new Date(now),
+            expiresAt: new Date(now + SESSION_INACTIVITY_MS),
+          },
+        });
+      }
 
       token.id = session.user.id;
       token.email = session.user.email;
@@ -190,11 +204,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
 });
 
-export async function getCurrentUser() {
+export const getCurrentUser = cache(async () => {
   const session = await auth();
   if (!session?.user?.id) return null;
   return session.user;
-}
+});
 
 export async function revokeCurrentSession() {
   const session = await auth();

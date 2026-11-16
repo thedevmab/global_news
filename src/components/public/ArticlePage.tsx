@@ -10,11 +10,11 @@ import { NewsletterForm } from "@/components/forms/NewsletterForm";
 import { AdSlot } from "@/components/media/AdSlot";
 import { getDictionary, localePath, type Locale } from "@/i18n";
 import { editorial } from "@/lib/editorial-images";
-import { mediaUrl } from "@/lib/media-url";
+import { pickVariantKey } from "@/lib/media-url";
 import { buildNewsArticleJsonLd } from "@/lib/seo/jsonld";
 import { absoluteUrl } from "@/lib/utils";
 import {
-  getPublishedArticleBySlug,
+  getArticleForRequest,
   getRelatedArticles,
 } from "@/server/articles/public";
 
@@ -28,7 +28,7 @@ export async function ArticlePageView({
   slug: string;
 }) {
   const dict = getDictionary(locale);
-  const article = await getPublishedArticleBySlug(categorySlug, slug, locale);
+  const article = await getArticleForRequest(categorySlug, slug, locale);
   if (!article) notFound();
 
   const related = await getRelatedArticles({
@@ -38,7 +38,7 @@ export async function ArticlePageView({
     tags: article.tags.map((t) => ({ tagId: t.tagId })),
   });
 
-  const image = mediaUrl(article.featuredMedia?.storageKey);
+  const image = pickVariantKey(article.featuredMedia, 1600);
   const author = article.authorProfile?.displayName || article.author.name;
   const categoryName =
     locale === "am" && article.category.nameAm
@@ -164,7 +164,7 @@ export async function ArticlePageView({
           </figure>
 
           <div className="prose-article mt-8 max-w-[68ch]">
-            <ArticleBody body={article.body} />
+            <ArticleBody html={article.bodyHtml} />
           </div>
           <AdSlot slotKey="MIDDLE" className="my-8 max-w-[68ch]" />
 

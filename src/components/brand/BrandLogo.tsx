@@ -1,8 +1,4 @@
-"use client";
-
 import Image from "next/image";
-import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 export function BrandLogo({
@@ -18,19 +14,11 @@ export function BrandLogo({
   width?: number;
   height?: number;
 }) {
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-
-  // Before mount (SSR/hydration), assume dark brand plate so the white mark
-  // never flashes invisible on a white header.
-  const isLight = mounted && resolvedTheme === "light";
-
   return (
     <span
       className={cn(
-        "inline-flex items-center justify-center",
-        isLight && "rounded-md bg-gvn-navy px-2 py-1",
+        "inline-flex items-center justify-center dark:bg-transparent",
+        "rounded-md bg-gvn-navy px-2 py-1 dark:rounded-none dark:bg-transparent dark:px-0 dark:py-0",
         className,
       )}
     >

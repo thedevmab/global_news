@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { articlePath, getDictionary, localePath, type Locale } from "@/i18n";
 import { editorial } from "@/lib/editorial-images";
-import { mediaUrl } from "@/lib/media-url";
+import { pickVariantKey } from "@/lib/media-url";
 import { cn } from "@/lib/utils";
 import type { ArticleCardData } from "@/server/articles/public";
 
@@ -42,7 +42,10 @@ export function ArticleCard({
 }) {
   const dict = getDictionary(locale);
   const href = articlePath(article);
-  const image = mediaUrl(article.featuredMedia?.storageKey);
+  const image = pickVariantKey(
+    article.featuredMedia,
+    thumb === "wide" || variant === "lead" ? 960 : 480,
+  );
   const alt = article.featuredMedia?.altText || article.headline;
   const when = dateLabel(article);
   const cat = categoryName(locale, article.category);

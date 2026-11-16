@@ -109,7 +109,6 @@ model User {
   campaignsCreated  NewsletterCampaign[]
 
   @@index([role, status])
-  @@index([emailNormalized])
 }
 
 model Session {
@@ -172,8 +171,6 @@ model AuthorProfile {
   user  User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
   photo Media?  @relation(fields: [photoMediaId], references: [id], onDelete: SetNull)
   articles Article[]
-
-  @@index([username])
 }
 
 model Category {
@@ -219,6 +216,7 @@ model Article {
   slug               String
   summary            String           @db.VarChar(300)
   body               Json
+  bodyPlain          String           @default("") @db.Text
   status             ArticleStatus    @default(DRAFT)
   language           ContentLanguage  @default(en)
   translationGroupId String?          @db.Uuid
@@ -262,6 +260,8 @@ model Article {
   @@index([status, publishedAt(sort: Desc)])
   @@index([categoryId, status, publishedAt(sort: Desc)])
   @@index([authorId, status])
+  @@index([authorProfileId, status, publishedAt(sort: Desc)])
+  @@index([status, updatedAt(sort: Desc)])
   @@index([scheduledAt])
   @@index([isBreaking, breakingExpiresAt])
   @@index([translationGroupId])
@@ -528,6 +528,8 @@ model NewsletterCampaign {
   createdBy  User                @relation(fields: [createdById], references: [id])
   articles   CampaignArticle[]
   recipients CampaignRecipient[]
+
+  @@index([status, updatedAt(sort: Desc)])
 }
 
 model CampaignArticle {
@@ -552,6 +554,8 @@ model CampaignRecipient {
   subscriber NewsletterSubscriber @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
 
   @@unique([campaignId, subscriberId])
+  @@index([campaignId, sentAt])
+  @@index([subscriberId])
 }
 
 model ContactMessage {
@@ -648,8 +652,6 @@ model SlugRedirect {
   fromPath  String   @unique
   toPath    String
   createdAt DateTime @default(now())
-
-  @@index([fromPath])
 }
 
 model RateLimitBucket {

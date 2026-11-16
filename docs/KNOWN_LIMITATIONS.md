@@ -12,9 +12,11 @@
 8. **FRD PDF** was not attached; requirement IDs are derived from the project brief.
 9. **SlugRedirect in proxy** queries the database on matching public content paths; if the DB is unreachable the request continues without redirect.
 10. **Turnstile** bypasses verification in development/test when `TURNSTILE_SECRET_KEY` is unset (warning logged). Production requires a real secret.
-11. **Next.js Cache Components** disabled (OD-16) due to Date/DB usage in public layouts; use `revalidatePath` / `revalidateTag` after editorial publishes.
+11. **Next.js Cache Components** disabled (OD-16): Partial Prerendering does not work with per-request CSP nonces on admin/auth. Public data uses `unstable_cache` + `revalidateTag` / ISR instead.
 12. **Some admin CMS UIs** (homepage drag polish, tag merge UX, full campaign composer) are functional shells on real services — deepen in Phase 2.
 13. **Local Docker Postgres** defaults to host port **5435** in this repo.
+14. **Maintenance mode propagation**: the proxy caches the maintenance flag in memory for up to **30 seconds per instance**. Turning it on or off may take that long to apply on each Node process.
+15. **Public CSP** uses a fixed policy with `script-src 'self' 'unsafe-inline'` (no nonce) so HTML can be CDN/ISR cached. Admin, login, reset-password, and preview keep a nonce + `strict-dynamic` CSP.
 
 ## Phase 2 backlog
 

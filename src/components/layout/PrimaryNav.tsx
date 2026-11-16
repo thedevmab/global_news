@@ -3,10 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Youtube } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type NavLinkItem = { href: string; label: string };
+export type NavLinkItem = {
+  href: string;
+  label: string;
+  icon?: "youtube";
+};
 
 function isCurrent(pathname: string, href: string, exact = false) {
   if (exact) return pathname === href;
@@ -116,10 +120,23 @@ function MoreMenu({
               key={item.href}
               href={item.href}
               role="menuitem"
-              className="block px-3 py-2 text-sm text-chrome-foreground/90 hover:bg-chrome-muted hover:text-chrome-foreground"
+              aria-label={item.icon ? item.label : undefined}
+              className={cn(
+                "px-3 py-2 text-sm text-chrome-foreground/90 hover:bg-chrome-muted hover:text-chrome-foreground",
+                item.icon === "youtube"
+                  ? "flex items-center gap-2"
+                  : "block",
+              )}
               onClick={() => setOpen(false)}
             >
-              {item.label}
+              {item.icon === "youtube" ? (
+                <>
+                  <Youtube className="h-4 w-4 shrink-0" aria-hidden />
+                  <span className="sr-only">{item.label}</span>
+                </>
+              ) : (
+                item.label
+              )}
             </Link>
           ))}
         </div>

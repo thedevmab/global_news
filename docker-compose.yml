@@ -7,7 +7,8 @@ services:
       POSTGRES_PASSWORD: gvn_dev_password
       POSTGRES_DB: gvn
     ports:
-      - "5435:5432"
+      # 5435 is often in Windows Hyper-V excluded ranges; 15432 is free locally.
+      - "15432:5432"
     volumes:
       - gvn_pgdata:/var/lib/postgresql/data
     healthcheck:

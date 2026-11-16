@@ -5,8 +5,11 @@ import {
   Prisma,
   type AdSlotKey,
 } from "@prisma/client";
+import { cache } from "react";
 import { prisma } from "@/lib/db";
 import type { Locale } from "@/i18n";
+import { renderArticleHtml } from "@/lib/article-html";
+import { cachedQuery, tags } from "@/server/cache";
 
 type Lang = ContentLanguage | Locale;
 
@@ -95,7 +98,7 @@ const articleDetailSelect = {
 
 export type PublishedArticle = Prisma.ArticleGetPayload<{
   select: typeof articleDetailSelect;
-}>;
+}> & { bodyHtml: string };
 
 export function isArticlePubliclyVisible(article: {
   status: string;
@@ -109,10 +112,10 @@ export function isArticlePubliclyVisible(article: {
   return true;
 }
 
-export async function getPublishedArticleBySlug(
+async function getPublishedArticleBySlugUncached(
   categorySlugOrSlug: string,
-  slugOrLanguage?: string,
-  maybeLanguage: Lang = "en",
+  slugOrLanguage: string | undefined,
+  maybeLanguage: Lang,
 ) {
   // (slug) | (slug, language) | (categorySlug, slug, language?)
   if (
@@ -153,7 +156,42 @@ export async function getPublishedArticleBySlug(
   });
 }
 
-export async function listLatestArticles(opts: {
+const cachedArticleBySlug = cachedQuery(
+  getPublishedArticleBySlugUncached,
+  ["getPublishedArticleBySlug"],
+  { tags: [tags.articles], revalidate: 300 },
+);
+
+export async function getPublishedArticleBySlug(
+  categorySlugOrSlug: string,
+  slugOrLanguage?: string,
+  maybeLanguage: Lang = "en",
+): Promise<PublishedArticle | null> {
+  const article = await cachedArticleBySlug(
+    categorySlugOrSlug,
+    slugOrLanguage,
+    maybeLanguage,
+  );
+  if (!article) return null;
+
+  // Second keyed entry so writes can invalidate tags.article(id); include bodyHtml.
+  return cachedQuery(
+    async () => ({
+      ...article,
+      bodyHtml: renderArticleHtml(article.body),
+    }),
+    ["article-entity", article.id],
+    { tags: [tags.articles, tags.article(article.id)], revalidate: 300 },
+  )();
+}
+
+/** Dedupes generateMetadata + page within one request. Always pass all three args. */
+export const getArticleForRequest = cache(
+  (category: string, slug: string, lang: Lang) =>
+    getPublishedArticleBySlug(category, slug, lang),
+);
+
+async function listLatestArticlesUncached(opts: {
   page?: number;
   pageSize?: number;
   language?: Lang;
@@ -188,6 +226,31 @@ export async function listLatestArticles(opts: {
   };
 }
 
+const cachedLatestPage1 = cachedQuery(
+  async (pageSize: number, language: string) =>
+    listLatestArticlesUncached({
+      page: 1,
+      pageSize,
+      language: language === "all" ? undefined : (language as Lang),
+    }),
+  ["listLatestArticles"],
+  { tags: [tags.homepage, tags.articles], revalidate: 60 },
+);
+
+export async function listLatestArticles(opts: {
+  page?: number;
+  pageSize?: number;
+  language?: Lang;
+  excludeIds?: string[];
+}) {
+  const page = Math.max(1, opts.page ?? 1);
+  const pageSize = Math.min(48, Math.max(1, opts.pageSize ?? 12));
+  if (page === 1 && !opts.excludeIds?.length) {
+    return cachedLatestPage1(pageSize, opts.language ?? "all");
+  }
+  return listLatestArticlesUncached(opts);
+}
+
 export async function listPublishedArticles(opts?: {
   categoryId?: string;
   take?: number;
@@ -213,19 +276,10 @@ type ListOpts = {
   language?: Lang;
 };
 
-export async function listByCategory(
-  categorySlugOrOpts: string | (ListOpts & { categorySlug: string }),
-  maybeOpts?: ListOpts,
+async function listByCategoryUncached(
+  categorySlug: string,
+  opts: ListOpts,
 ) {
-  const categorySlug =
-    typeof categorySlugOrOpts === "string"
-      ? categorySlugOrOpts
-      : categorySlugOrOpts.categorySlug;
-  const opts =
-    typeof categorySlugOrOpts === "string"
-      ? (maybeOpts ?? {})
-      : categorySlugOrOpts;
-
   const page = Math.max(1, opts.page ?? 1);
   const pageSize = Math.min(48, Math.max(1, opts.pageSize ?? 12));
 
@@ -271,17 +325,33 @@ export async function listByCategory(
   };
 }
 
-export async function listByTag(
-  tagSlugOrOpts: string | (ListOpts & { tagSlug: string }),
+const cachedListByCategory = cachedQuery(
+  listByCategoryUncached,
+  ["listByCategory"],
+  { tags: [tags.articles, tags.categories], revalidate: 120 },
+);
+
+export async function listByCategory(
+  categorySlugOrOpts: string | (ListOpts & { categorySlug: string }),
   maybeOpts?: ListOpts,
 ) {
-  const tagSlug =
-    typeof tagSlugOrOpts === "string"
-      ? tagSlugOrOpts
-      : tagSlugOrOpts.tagSlug;
+  const categorySlug =
+    typeof categorySlugOrOpts === "string"
+      ? categorySlugOrOpts
+      : categorySlugOrOpts.categorySlug;
   const opts =
-    typeof tagSlugOrOpts === "string" ? (maybeOpts ?? {}) : tagSlugOrOpts;
+    typeof categorySlugOrOpts === "string"
+      ? (maybeOpts ?? {})
+      : categorySlugOrOpts;
 
+  const page = Math.max(1, opts.page ?? 1);
+  if (page >= 1 && page <= 5) {
+    return cachedListByCategory(categorySlug, opts);
+  }
+  return listByCategoryUncached(categorySlug, opts);
+}
+
+async function listByTagUncached(tagSlug: string, opts: ListOpts) {
   const page = Math.max(1, opts.page ?? 1);
   const pageSize = Math.min(48, Math.max(1, opts.pageSize ?? 12));
 
@@ -314,17 +384,31 @@ export async function listByTag(
   };
 }
 
-export async function listByAuthor(
-  usernameOrOpts: string | (ListOpts & { username: string }),
+const cachedListByTag = cachedQuery(
+  listByTagUncached,
+  ["listByTag"],
+  { tags: [tags.articles, tags.tagsAll], revalidate: 120 },
+);
+
+export async function listByTag(
+  tagSlugOrOpts: string | (ListOpts & { tagSlug: string }),
   maybeOpts?: ListOpts,
 ) {
-  const username =
-    typeof usernameOrOpts === "string"
-      ? usernameOrOpts
-      : usernameOrOpts.username;
+  const tagSlug =
+    typeof tagSlugOrOpts === "string"
+      ? tagSlugOrOpts
+      : tagSlugOrOpts.tagSlug;
   const opts =
-    typeof usernameOrOpts === "string" ? (maybeOpts ?? {}) : usernameOrOpts;
+    typeof tagSlugOrOpts === "string" ? (maybeOpts ?? {}) : tagSlugOrOpts;
 
+  const page = Math.max(1, opts.page ?? 1);
+  if (page >= 1 && page <= 5) {
+    return cachedListByTag(tagSlug, opts);
+  }
+  return listByTagUncached(tagSlug, opts);
+}
+
+async function listByAuthorUncached(username: string, opts: ListOpts) {
   const page = Math.max(1, opts.page ?? 1);
   const pageSize = Math.min(48, Math.max(1, opts.pageSize ?? 12));
 
@@ -364,6 +448,60 @@ export async function listByAuthor(
   };
 }
 
+const cachedListByAuthor = cachedQuery(
+  listByAuthorUncached,
+  ["listByAuthor"],
+  { tags: [tags.articles, tags.authors], revalidate: 120 },
+);
+
+export async function listByAuthor(
+  usernameOrOpts: string | (ListOpts & { username: string }),
+  maybeOpts?: ListOpts,
+) {
+  const username =
+    typeof usernameOrOpts === "string"
+      ? usernameOrOpts
+      : usernameOrOpts.username;
+  const opts =
+    typeof usernameOrOpts === "string" ? (maybeOpts ?? {}) : usernameOrOpts;
+
+  const page = Math.max(1, opts.page ?? 1);
+  if (page >= 1 && page <= 5) {
+    return cachedListByAuthor(username, opts);
+  }
+  return listByAuthorUncached(username, opts);
+}
+
+async function getRelatedArticlesUncached(
+  id: string,
+  categoryId: string,
+  language: ContentLanguage,
+  tagIdList: string[],
+  limit: number,
+) {
+  return prisma.article.findMany({
+    where: {
+      ...publishedWhere(language),
+      id: { not: id },
+      OR: [
+        { categoryId },
+        ...(tagIdList.length
+          ? [{ tags: { some: { tagId: { in: tagIdList } } } }]
+          : []),
+      ],
+    },
+    select: articleCardSelect,
+    orderBy: [{ publishedAt: "desc" }],
+    take: limit,
+  });
+}
+
+const cachedRelatedArticles = cachedQuery(
+  getRelatedArticlesUncached,
+  ["getRelatedArticles"],
+  { tags: [tags.articles], revalidate: 300 },
+);
+
 export async function getRelatedArticles(
   articleOrId:
     | string
@@ -380,440 +518,354 @@ export async function getRelatedArticles(
   let id: string;
   let categoryId: string;
   let language: ContentLanguage = ContentLanguage.en;
-  let tags: string[] = [];
+  let tagIdList: string[] = [];
   let limit = 4;
 
   if (typeof articleOrId === "string") {
     id = articleOrId;
     categoryId = String(categoryIdOrLimit || "");
-    tags = tagIds ?? [];
+    tagIdList = tagIds ?? [];
     limit = maybeLimit ?? 4;
   } else {
     id = articleOrId.id;
     categoryId = articleOrId.categoryId;
     language = articleOrId.language;
-    tags = articleOrId.tags?.map((t) => t.tagId) ?? [];
+    tagIdList = articleOrId.tags?.map((t) => t.tagId) ?? [];
     limit = typeof categoryIdOrLimit === "number" ? categoryIdOrLimit : 4;
   }
 
-  return prisma.article.findMany({
-    where: {
-      ...publishedWhere(language),
-      id: { not: id },
-      OR: [
-        { categoryId },
-        ...(tags.length ? [{ tags: { some: { tagId: { in: tags } } } }] : []),
-      ],
-    },
-    select: articleCardSelect,
-    orderBy: [{ publishedAt: "desc" }],
-    take: limit,
-  });
+  return cachedRelatedArticles(id, categoryId, language, tagIdList, limit);
 }
 
-export async function getBreakingNews(language?: Lang, limit = 5) {
-  const now = new Date();
-  return prisma.article.findMany({
-    where: {
-      ...publishedWhere(language),
-      isBreaking: true,
-      OR: [{ breakingExpiresAt: null }, { breakingExpiresAt: { gt: now } }],
-    },
-    select: {
-      id: true,
-      headline: true,
-      slug: true,
-      language: true,
-      category: { select: { slug: true, nameEn: true, nameAm: true } },
-    },
-    orderBy: [{ publishedAt: "desc" }],
-    take: limit,
-  });
-}
+export const getBreakingNews = cachedQuery(
+  async (language?: Lang, limit?: number) => {
+    const take = limit ?? 5;
+    const now = new Date();
+    return prisma.article.findMany({
+      where: {
+        ...publishedWhere(language),
+        isBreaking: true,
+        OR: [{ breakingExpiresAt: null }, { breakingExpiresAt: { gt: now } }],
+      },
+      select: {
+        id: true,
+        headline: true,
+        slug: true,
+        language: true,
+        category: { select: { slug: true, nameEn: true, nameAm: true } },
+      },
+      orderBy: [{ publishedAt: "desc" }],
+      take,
+    });
+  },
+  ["getBreakingNews"],
+  { tags: [tags.breaking, tags.articles], revalidate: 30 },
+);
 
 /** Published article titles from the last `hours` (default 12). Homepage ticker. */
-export async function listRecentHeadlines(opts?: {
-  hours?: number;
-  limit?: number;
-  language?: Lang;
-}) {
-  const hours = Math.max(1, opts?.hours ?? 12);
-  const limit = Math.min(40, Math.max(1, opts?.limit ?? 20));
-  const now = new Date();
-  const since = new Date(now.getTime() - hours * 60 * 60 * 1000);
+export const listRecentHeadlines = cachedQuery(
+  async (opts?: { hours?: number; limit?: number; language?: Lang }) => {
+    const hours = Math.max(1, opts?.hours ?? 12);
+    const limit = Math.min(40, Math.max(1, opts?.limit ?? 20));
+    const now = new Date();
+    const since = new Date(now.getTime() - hours * 60 * 60 * 1000);
 
-  return prisma.article.findMany({
-    where: {
-      ...publishedWhere(opts?.language),
-      hideFromHomepage: false,
-      publishedAt: { gte: since, lte: now },
-    },
-    select: {
-      id: true,
-      headline: true,
-      slug: true,
-      language: true,
-      publishedAt: true,
-      category: { select: { slug: true } },
-    },
-    orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
-    take: limit,
-  });
-}
+    return prisma.article.findMany({
+      where: {
+        ...publishedWhere(opts?.language),
+        hideFromHomepage: false,
+        publishedAt: { gte: since, lte: now },
+      },
+      select: {
+        id: true,
+        headline: true,
+        slug: true,
+        language: true,
+        publishedAt: true,
+        category: { select: { slug: true } },
+      },
+      orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
+      take: limit,
+    });
+  },
+  ["listRecentHeadlines"],
+  { tags: [tags.homepage, tags.articles], revalidate: 60 },
+);
 
-export async function getHomepageLeadAndSecondary(language?: Lang) {
-  const slots = await prisma.homepageSlot.findMany({
-    orderBy: [{ type: "asc" }, { position: "asc" }],
-  });
+export const getHomepageLeadAndSecondary = cachedQuery(
+  async (language?: Lang) => {
+    const slots = await prisma.homepageSlot.findMany({
+      orderBy: [{ type: "asc" }, { position: "asc" }],
+    });
 
-  const ids = slots.map((s) => s.articleId);
-  if (ids.length === 0) {
-    return {
-      lead: null as ArticleCardData | null,
-      secondary: [] as ArticleCardData[],
+    const ids = slots.map((s) => s.articleId);
+    if (ids.length === 0) {
+      return {
+        lead: null as ArticleCardData | null,
+        secondary: [] as ArticleCardData[],
+      };
+    }
+
+    const live = await prisma.article.findMany({
+      where: {
+        id: { in: ids },
+        ...publishedWhere(language),
+        hideFromHomepage: false,
+      },
+      select: articleCardSelect,
+    });
+    const byId = new Map(live.map((a) => [a.id, a]));
+
+    const leadSlot = slots.find((s) => s.type === HomepageSlotType.LEAD);
+    const lead = leadSlot ? (byId.get(leadSlot.articleId) ?? null) : null;
+
+    const secondary = slots
+      .filter((s) => s.type === HomepageSlotType.SECONDARY)
+      .sort((a, b) => a.position - b.position)
+      .map((s) => byId.get(s.articleId))
+      .filter((a): a is ArticleCardData => Boolean(a))
+      .slice(0, 4);
+
+    return { lead, secondary };
+  },
+  ["getHomepageLeadAndSecondary"],
+  { tags: [tags.homepage, tags.articles], revalidate: 60 },
+);
+
+export { searchPublished, type SearchHit } from "@/server/search/query";
+export { parseSearchParams } from "@/server/search/params";
+
+export const getHomepageCategorySections = cachedQuery(
+  async (language?: Lang, perCategory?: number) => {
+    const take = perCategory ?? 4;
+    const homepageCats = await prisma.homepageCategory.findMany({
+      include: { category: true },
+      orderBy: { position: "asc" },
+    });
+
+    const sections = await Promise.all(
+      homepageCats
+        .filter((hc) => hc.category.isActive)
+        .map(async (hc) => {
+          const articles = await prisma.article.findMany({
+            where: {
+              ...publishedWhere(language),
+              categoryId: hc.categoryId,
+              hideFromHomepage: false,
+            },
+            select: articleCardSelect,
+            orderBy: [{ publishedAt: "desc" }],
+            take,
+          });
+          return { category: hc.category, articles };
+        }),
+    );
+
+    return sections.filter((s) => s.articles.length > 0);
+  },
+  ["getHomepageCategorySections"],
+  { tags: [tags.homepage, tags.articles], revalidate: 60 },
+);
+
+export const listPublishedVideos = cachedQuery(
+  async (opts: { page?: number; pageSize?: number; language?: Lang }) => {
+    const page = Math.max(1, opts.page ?? 1);
+    const pageSize = Math.min(48, Math.max(1, opts.pageSize ?? 12));
+    const now = new Date();
+    const where: Prisma.VideoWhereInput = {
+      status: ArticleStatus.PUBLISHED,
+      deletedAt: null,
+      publishedAt: { lte: now },
+      ...(opts.language ? { language: opts.language as ContentLanguage } : {}),
     };
-  }
 
-  const live = await prisma.article.findMany({
-    where: {
-      id: { in: ids },
-      ...publishedWhere(language),
-      hideFromHomepage: false,
-    },
-    select: articleCardSelect,
-  });
-  const byId = new Map(live.map((a) => [a.id, a]));
+    const [items, total] = await Promise.all([
+      prisma.video.findMany({
+        where,
+        include: {
+          category: {
+            select: { slug: true, nameEn: true, nameAm: true },
+          },
+        },
+        orderBy: [{ publishedAt: "desc" }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.video.count({ where }),
+    ]);
 
-  const leadSlot = slots.find((s) => s.type === HomepageSlotType.LEAD);
-  const lead = leadSlot ? (byId.get(leadSlot.articleId) ?? null) : null;
-
-  const secondary = slots
-    .filter((s) => s.type === HomepageSlotType.SECONDARY)
-    .sort((a, b) => a.position - b.position)
-    .map((s) => byId.get(s.articleId))
-    .filter((a): a is ArticleCardData => Boolean(a))
-    .slice(0, 4);
-
-  return { lead, secondary };
-}
-
-export type SearchHit = {
-  id: string;
-  headline: string;
-  slug: string;
-  summary: string;
-  language: ContentLanguage;
-  publishedAt: Date | null;
-  category_slug: string;
-  category_name_en: string;
-  category_name_am: string | null;
-  category_name: string;
-  headline_hl: string;
-  summary_hl: string;
-  snippet: string;
-  rank: number;
-};
-
-export async function searchArticles(opts: {
-  query?: string;
-  q?: string;
-  page?: number;
-  pageSize?: number;
-  language?: Lang;
-  categorySlug?: string;
-  sort?: "relevance" | "newest";
-}) {
-  const q = (opts.query ?? opts.q ?? "").trim();
-  const page = Math.max(1, opts.page ?? 1);
-  const pageSize = Math.min(48, Math.max(1, opts.pageSize ?? 12));
-  const offset = (page - 1) * pageSize;
-
-  if (!q) {
     return {
-      items: [] as SearchHit[],
-      total: 0,
+      items,
+      total,
       page,
       pageSize,
-      totalPages: 1,
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
     };
-  }
+  },
+  ["listPublishedVideos"],
+  { tags: [tags.videos], revalidate: 300 },
+);
 
-  const language = opts.language ?? null;
-  const categorySlug = opts.categorySlug ?? null;
-  const sortNewest = opts.sort === "newest";
-
-  const items = await prisma.$queryRaw<SearchHit[]>`
-    SELECT
-      a.id,
-      a.headline,
-      a.slug,
-      a.summary,
-      a.language,
-      a."publishedAt",
-      c.slug AS category_slug,
-      c."nameEn" AS category_name_en,
-      c."nameAm" AS category_name_am,
-      c."nameEn" AS category_name,
-      ts_headline(
-        'english',
-        a.headline,
-        plainto_tsquery('english', ${q}),
-        'StartSel=<mark>, StopSel=</mark>, MaxWords=20, MinWords=5'
-      ) AS headline_hl,
-      ts_headline(
-        'english',
-        a.summary,
-        plainto_tsquery('english', ${q}),
-        'StartSel=<mark>, StopSel=</mark>, MaxWords=35, MinWords=12'
-      ) AS summary_hl,
-      ts_headline(
-        'english',
-        a.summary,
-        plainto_tsquery('english', ${q}),
-        'StartSel=<mark>, StopSel=</mark>, MaxWords=35, MinWords=12'
-      ) AS snippet,
-      ts_rank(a."searchVector", plainto_tsquery('english', ${q})) AS rank
-    FROM "Article" a
-    INNER JOIN "Category" c ON c.id = a."categoryId"
-    WHERE
-      a.status = 'PUBLISHED'
-      AND a."deletedAt" IS NULL
-      AND a."publishedAt" <= NOW()
-      AND a."searchVector" @@ plainto_tsquery('english', ${q})
-      AND (${language}::text IS NULL OR a.language::text = ${language})
-      AND (${categorySlug}::text IS NULL OR c.slug = ${categorySlug})
-    ORDER BY
-      CASE WHEN ${sortNewest} THEN 0 ELSE 1 END,
-      CASE WHEN ${sortNewest} THEN EXTRACT(EPOCH FROM a."publishedAt") ELSE ts_rank(a."searchVector", plainto_tsquery('english', ${q})) END DESC,
-      a."publishedAt" DESC
-    LIMIT ${pageSize} OFFSET ${offset}
-  `;
-
-  const countRows = await prisma.$queryRaw<Array<{ count: bigint }>>`
-    SELECT COUNT(*)::bigint AS count
-    FROM "Article" a
-    INNER JOIN "Category" c ON c.id = a."categoryId"
-    WHERE
-      a.status = 'PUBLISHED'
-      AND a."deletedAt" IS NULL
-      AND a."publishedAt" <= NOW()
-      AND a."searchVector" @@ plainto_tsquery('english', ${q})
-      AND (${language}::text IS NULL OR a.language::text = ${language})
-      AND (${categorySlug}::text IS NULL OR c.slug = ${categorySlug})
-  `;
-
-  const total = Number(countRows[0]?.count ?? 0);
-
-  return {
-    items,
-    total,
-    page,
-    pageSize,
-    totalPages: Math.max(1, Math.ceil(total / pageSize)),
-  };
-}
-
-export async function getHomepageCategorySections(
-  language?: Lang,
-  perCategory = 4,
-) {
-  const homepageCats = await prisma.homepageCategory.findMany({
-    include: { category: true },
-    orderBy: { position: "asc" },
-  });
-
-  const sections = await Promise.all(
-    homepageCats
-      .filter((hc) => hc.category.isActive)
-      .map(async (hc) => {
-        const articles = await prisma.article.findMany({
-          where: {
-            ...publishedWhere(language),
-            categoryId: hc.categoryId,
-            hideFromHomepage: false,
-          },
-          select: articleCardSelect,
-          orderBy: [{ publishedAt: "desc" }],
-          take: perCategory,
-        });
-        return { category: hc.category, articles };
-      }),
-  );
-
-  return sections.filter((s) => s.articles.length > 0);
-}
-
-export async function listPublishedVideos(opts: {
-  page?: number;
-  pageSize?: number;
-  language?: Lang;
-}) {
-  const page = Math.max(1, opts.page ?? 1);
-  const pageSize = Math.min(48, Math.max(1, opts.pageSize ?? 12));
-  const now = new Date();
-  const where: Prisma.VideoWhereInput = {
-    status: ArticleStatus.PUBLISHED,
-    deletedAt: null,
-    publishedAt: { lte: now },
-    ...(opts.language ? { language: opts.language as ContentLanguage } : {}),
-  };
-
-  const [items, total] = await Promise.all([
-    prisma.video.findMany({
-      where,
+export const getPublishedVideoBySlug = cachedQuery(
+  async (slug: string) => {
+    const now = new Date();
+    return prisma.video.findFirst({
+      where: {
+        slug,
+        status: ArticleStatus.PUBLISHED,
+        deletedAt: null,
+        publishedAt: { lte: now },
+      },
       include: {
         category: {
           select: { slug: true, nameEn: true, nameAm: true },
         },
       },
-      orderBy: [{ publishedAt: "desc" }],
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    }),
-    prisma.video.count({ where }),
-  ]);
+    });
+  },
+  ["getPublishedVideoBySlug"],
+  { tags: [tags.videos], revalidate: 300 },
+);
 
-  return {
-    items,
-    total,
-    page,
-    pageSize,
-    totalPages: Math.max(1, Math.ceil(total / pageSize)),
-  };
-}
-
-export async function getPublishedVideoBySlug(slug: string) {
-  const now = new Date();
-  return prisma.video.findFirst({
-    where: {
-      slug,
+export const listPublishedPodcasts = cachedQuery(
+  async (opts: { page?: number; pageSize?: number; language?: Lang }) => {
+    const page = Math.max(1, opts.page ?? 1);
+    const pageSize = Math.min(48, Math.max(1, opts.pageSize ?? 12));
+    const now = new Date();
+    const where: Prisma.PodcastWhereInput = {
       status: ArticleStatus.PUBLISHED,
       deletedAt: null,
       publishedAt: { lte: now },
-    },
-    include: {
-      category: {
-        select: { slug: true, nameEn: true, nameAm: true },
+      ...(opts.language ? { language: opts.language as ContentLanguage } : {}),
+    };
+
+    const [items, total] = await Promise.all([
+      prisma.podcast.findMany({
+        where,
+        include: {
+          category: {
+            select: { slug: true, nameEn: true, nameAm: true },
+          },
+          audioMedia: {
+            select: { storageKey: true, originalName: true },
+          },
+        },
+        orderBy: [{ publishedAt: "desc" }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.podcast.count({ where }),
+    ]);
+
+    return {
+      items,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    };
+  },
+  ["listPublishedPodcasts"],
+  { tags: [tags.podcasts], revalidate: 300 },
+);
+
+export const getPublishedPodcastBySlug = cachedQuery(
+  async (slug: string) => {
+    const now = new Date();
+    return prisma.podcast.findFirst({
+      where: {
+        slug,
+        status: ArticleStatus.PUBLISHED,
+        deletedAt: null,
+        publishedAt: { lte: now },
       },
-    },
-  });
-}
-
-export async function listPublishedPodcasts(opts: {
-  page?: number;
-  pageSize?: number;
-  language?: Lang;
-}) {
-  const page = Math.max(1, opts.page ?? 1);
-  const pageSize = Math.min(48, Math.max(1, opts.pageSize ?? 12));
-  const now = new Date();
-  const where: Prisma.PodcastWhereInput = {
-    status: ArticleStatus.PUBLISHED,
-    deletedAt: null,
-    publishedAt: { lte: now },
-    ...(opts.language ? { language: opts.language as ContentLanguage } : {}),
-  };
-
-  const [items, total] = await Promise.all([
-    prisma.podcast.findMany({
-      where,
       include: {
         category: {
           select: { slug: true, nameEn: true, nameAm: true },
         },
         audioMedia: {
-          select: { storageKey: true, originalName: true },
-        },
-      },
-      orderBy: [{ publishedAt: "desc" }],
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    }),
-    prisma.podcast.count({ where }),
-  ]);
-
-  return {
-    items,
-    total,
-    page,
-    pageSize,
-    totalPages: Math.max(1, Math.ceil(total / pageSize)),
-  };
-}
-
-export async function getPublishedPodcastBySlug(slug: string) {
-  const now = new Date();
-  return prisma.podcast.findFirst({
-    where: {
-      slug,
-      status: ArticleStatus.PUBLISHED,
-      deletedAt: null,
-      publishedAt: { lte: now },
-    },
-    include: {
-      category: {
-        select: { slug: true, nameEn: true, nameAm: true },
-      },
-      audioMedia: {
-        select: { storageKey: true, originalName: true, mimeType: true },
-      },
-    },
-  });
-}
-
-export async function getPublishedStaticPage(slug: string, language?: Lang) {
-  return prisma.staticPage.findFirst({
-    where: {
-      slug,
-      published: true,
-      ...(language ? { language: language as ContentLanguage } : {}),
-    },
-  });
-}
-
-export async function getActiveAd(slotKey: AdSlotKey) {
-  try {
-    const now = new Date();
-    const slot = await prisma.adSlot.findUnique({
-      where: { key: slotKey },
-      include: {
-        advertisements: {
-          where: {
-            isActive: true,
-            AND: [
-              { OR: [{ startsAt: null }, { startsAt: { lte: now } }] },
-              { OR: [{ endsAt: null }, { endsAt: { gt: now } }] },
-            ],
-          },
-          orderBy: { createdAt: "desc" },
-          take: 1,
+          select: { storageKey: true, originalName: true, mimeType: true },
         },
       },
     });
-    return slot?.advertisements[0] ?? null;
-  } catch {
-    // Missing enum/slot on a lagging DB must not 500 the page.
-    return null;
-  }
-}
+  },
+  ["getPublishedPodcastBySlug"],
+  { tags: [tags.podcasts], revalidate: 300 },
+);
 
-export async function getActiveCategories() {
-  return prisma.category.findMany({
-    where: { isActive: true, parentId: null },
-    orderBy: { sortOrder: "asc" },
-  });
-}
+export const getPublishedStaticPage = cachedQuery(
+  async (slug: string, language?: Lang) => {
+    return prisma.staticPage.findFirst({
+      where: {
+        slug,
+        published: true,
+        ...(language ? { language: language as ContentLanguage } : {}),
+      },
+    });
+  },
+  ["getPublishedStaticPage"],
+  { tags: [tags.pages], revalidate: 600 },
+);
 
-export async function getNavigationItems(location: string) {
-  return prisma.navigationItem.findMany({
-    where: { location, parentId: null },
-    orderBy: { sortOrder: "asc" },
-    include: {
-      children: { orderBy: { sortOrder: "asc" } },
-    },
-  });
-}
+export const getActiveAd = cachedQuery(
+  async (slotKey: AdSlotKey) => {
+    try {
+      const now = new Date();
+      const slot = await prisma.adSlot.findUnique({
+        where: { key: slotKey },
+        include: {
+          advertisements: {
+            where: {
+              isActive: true,
+              AND: [
+                { OR: [{ startsAt: null }, { startsAt: { lte: now } }] },
+                { OR: [{ endsAt: null }, { endsAt: { gt: now } }] },
+              ],
+            },
+            orderBy: { createdAt: "desc" },
+            take: 1,
+          },
+        },
+      });
+      return slot?.advertisements[0] ?? null;
+    } catch {
+      // Missing enum/slot on a lagging DB must not 500 the page.
+      return null;
+    }
+  },
+  ["getActiveAd"],
+  { tags: [tags.ads], revalidate: 60 },
+);
 
-export async function getSiteSettingsRow() {
-  return prisma.siteSetting.findUnique({ where: { id: "default" } });
-}
+export const getActiveCategories = cachedQuery(
+  async () => {
+    return prisma.category.findMany({
+      where: { isActive: true, parentId: null },
+      orderBy: { sortOrder: "asc" },
+    });
+  },
+  ["getActiveCategories"],
+  { tags: [tags.categories, tags.nav], revalidate: 300 },
+);
+
+export const getNavigationItems = cachedQuery(
+  async (location: string) => {
+    return prisma.navigationItem.findMany({
+      where: { location, parentId: null },
+      orderBy: { sortOrder: "asc" },
+      include: {
+        children: { orderBy: { sortOrder: "asc" } },
+      },
+    });
+  },
+  ["getNavigationItems"],
+  { tags: [tags.categories, tags.nav], revalidate: 300 },
+);
+
+export const getSiteSettingsRow = cachedQuery(
+  async () => {
+    return prisma.siteSetting.findUnique({ where: { id: "default" } });
+  },
+  ["getSiteSettingsRow"],
+  { tags: [tags.settings], revalidate: 300 },
+);

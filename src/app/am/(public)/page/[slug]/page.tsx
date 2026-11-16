@@ -4,6 +4,12 @@ import { ArticleBody } from "@/components/article/ArticleBody";
 import { localePath } from "@/i18n";
 import { getPublishedStaticPage } from "@/server/articles/public";
 
+export const revalidate = 300;
+
+export async function generateStaticParams() {
+  return [];
+}
+
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

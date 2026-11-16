@@ -24,10 +24,12 @@ export async function AdSlot({
       : null;
 
   const image = ad.imageUrl ? (
-    // eslint-disable-next-line @next/next/no-img-element
+    // eslint-disable-next-line @next/next/no-img-element -- ad hosts are arbitrary
     <img
       src={ad.imageUrl}
       alt={ad.name}
+      loading="lazy"
+      decoding="async"
       className="gvn-media mx-auto h-auto max-h-36 w-full max-w-5xl object-contain md:max-h-44"
     />
   ) : null;

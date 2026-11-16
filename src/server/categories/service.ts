@@ -3,6 +3,7 @@ import { requirePermission, type AuthUser } from "@/lib/rbac";
 import { NotFoundError } from "@/lib/errors";
 import { slugify } from "@/lib/utils";
 import { writeAudit } from "@/server/audit";
+import { invalidate, tags } from "@/server/cache";
 import { z } from "zod";
 
 const categorySchema = z.object({
@@ -53,6 +54,7 @@ export async function createCategory(user: AuthUser, input: unknown) {
     entityType: "Category",
     entityId: category.id,
   });
+  invalidate(tags.categories, tags.nav, tags.articles, tags.homepage);
   return category;
 }
 
@@ -78,6 +80,7 @@ export async function updateCategory(
     entityType: "Category",
     entityId: id,
   });
+  invalidate(tags.categories, tags.nav, tags.articles, tags.homepage);
   return category;
 }
 
@@ -98,4 +101,5 @@ export async function deleteCategory(user: AuthUser, id: string) {
     entityType: "Category",
     entityId: id,
   });
+  invalidate(tags.categories, tags.nav, tags.articles, tags.homepage);
 }

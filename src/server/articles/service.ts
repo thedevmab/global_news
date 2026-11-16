@@ -23,6 +23,8 @@ import { extractTipTapText, EMPTY_DOC } from "@/lib/tiptap-text";
 import { generateToken, hashToken } from "@/lib/security/tokens";
 import { transitionArticleStatus } from "@/server/articles/workflow";
 import { writeAudit } from "@/server/audit";
+import { invalidate, tags } from "@/server/cache";
+import { mapWithConcurrency } from "@/lib/utils";
 
 async function ensureUniqueSlug(
   slugSource: string,
@@ -121,6 +123,7 @@ export async function createArticle(user: AuthUser, input: unknown) {
         slug,
         summary,
         body: data.body as Prisma.InputJsonValue,
+        bodyPlain: text,
         categoryId,
         language: data.language,
         authorId: user.id,
@@ -157,6 +160,7 @@ export async function createArticle(user: AuthUser, input: unknown) {
     return created;
   });
 
+  invalidate(tags.articles, tags.article(article.id), tags.homepage);
   return article;
 }
 
@@ -239,6 +243,7 @@ export async function updateArticle(
         slug: nextSlug,
         summary,
         body: body as Prisma.InputJsonValue,
+        bodyPlain: text,
         categoryId: nextCategoryId,
         language,
         featuredMediaId: nextFeatured,
@@ -297,6 +302,12 @@ export async function updateArticle(
     return article;
   });
 
+  invalidate(
+    tags.articles,
+    tags.article(id),
+    tags.homepage,
+    tags.breaking,
+  );
   return updated;
 }
 
@@ -432,12 +443,10 @@ export async function bulkTransitionArticles(
   to: ArticleStatus,
   reason?: string,
 ) {
-  const results = [];
-  for (const articleId of articleIds) {
-    results.push(
-      await transitionArticle(user, { articleId, to, reason }),
-    );
-  }
+  const results = await mapWithConcurrency(articleIds, 4, (articleId) =>
+    transitionArticle(user, { articleId, to, reason }),
+  );
+  invalidate(tags.articles, tags.homepage, tags.breaking);
   return results;
 }
 

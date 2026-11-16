@@ -3,7 +3,7 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { articlePath, getDictionary, localePath, type Locale } from "@/i18n";
 import { editorial } from "@/lib/editorial-images";
-import { mediaUrl } from "@/lib/media-url";
+import { pickVariantKey } from "@/lib/media-url";
 import type { ArticleCardData } from "@/server/articles/public";
 
 function authorName(article: ArticleCardData) {
@@ -29,7 +29,7 @@ export function HomeHero({
   const dict = getDictionary(locale);
   const href = articlePath(article);
   const catHref = localePath(locale, `/${article.category.slug}`);
-  const image = mediaUrl(article.featuredMedia?.storageKey);
+  const image = pickVariantKey(article.featuredMedia, 1600);
   const alt = article.featuredMedia?.altText || article.headline;
   const when = article.publishedAt
     ? format(article.publishedAt, "MMM d, yyyy")

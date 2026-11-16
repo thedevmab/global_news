@@ -25,7 +25,7 @@ export default async function ArticleRevisionsPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-serif text-2xl font-semibold">Revisions</h1>
         <Link
           href={`/admin/articles/${id}/edit`}

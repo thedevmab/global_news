@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { format } from "date-fns";
 import { getDictionary, type Locale } from "@/i18n";
 import {
@@ -33,14 +34,13 @@ function Badge({
     );
   }
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
+    <Image
       src={src}
       alt=""
       width={px}
       height={px}
       className={cn("shrink-0 object-contain", box)}
-      loading="lazy"
+      unoptimized={src.includes("thesportsdb.com")}
     />
   );
 }

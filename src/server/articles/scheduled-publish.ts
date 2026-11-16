@@ -1,6 +1,7 @@
 import { ArticleStatus, type Article } from "@prisma/client";
-import { prisma, type TxClient } from "@/lib/db";
+import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { invalidate, tags } from "@/server/cache";
 
 type LockedArticle = Pick<Article, "id" | "status" | "authorId" | "scheduledAt">;
 
@@ -12,7 +13,7 @@ export async function publishDueScheduledArticles(limit = 25): Promise<{
   skipped: number;
 }> {
   const now = new Date();
-  const publishedIds: string[] = [];
+  let publishedIds: string[] = [];
   let skipped = 0;
 
   await prisma.$transaction(async (tx) => {
@@ -28,60 +29,63 @@ export async function publishDueScheduledArticles(limit = 25): Promise<{
       FOR UPDATE SKIP LOCKED
     `;
 
-    for (const row of due) {
-      // Re-check inside the lock — another worker may have flipped status
-      if (row.status !== ArticleStatus.SCHEDULED) {
-        skipped += 1;
-        continue;
-      }
-
-      await publishLockedScheduled(tx, row, now);
-      publishedIds.push(row.id);
+    const eligible = due.filter((row) => row.status === ArticleStatus.SCHEDULED);
+    skipped = due.length - eligible.length;
+    if (eligible.length === 0) {
+      publishedIds = [];
+      return;
     }
+
+    const ids = eligible.map((row) => row.id);
+
+    await tx.article.updateMany({
+      where: { id: { in: ids }, status: ArticleStatus.SCHEDULED },
+      data: {
+        status: ArticleStatus.PUBLISHED,
+        publishedAt: now,
+        scheduledAt: null,
+      },
+    });
+
+    await tx.articleStateLog.createMany({
+      data: eligible.map((row) => ({
+        articleId: row.id,
+        fromStatus: ArticleStatus.SCHEDULED,
+        toStatus: ArticleStatus.PUBLISHED,
+        userId: row.authorId,
+        reason: "cron_scheduled_publish",
+      })),
+    });
+
+    await tx.auditLog.createMany({
+      data: eligible.map((row) => ({
+        actorId: null,
+        action: "article.cron_publish",
+        entityType: "Article",
+        entityId: row.id,
+        metadata: {
+          from: ArticleStatus.SCHEDULED,
+          to: ArticleStatus.PUBLISHED,
+          scheduledAt: row.scheduledAt?.toISOString() ?? null,
+        },
+      })),
+    });
+
+    publishedIds = ids;
   });
 
   if (publishedIds.length) {
-    logger.info("cron.publish_scheduled", { count: publishedIds.length, publishedIds });
+    logger.info("cron.publish_scheduled", {
+      count: publishedIds.length,
+      publishedIds,
+    });
+    invalidate(
+      tags.articles,
+      tags.homepage,
+      tags.breaking,
+      ...publishedIds.map((id) => tags.article(id)),
+    );
   }
 
   return { publishedIds, skipped };
-}
-
-async function publishLockedScheduled(
-  tx: TxClient,
-  article: LockedArticle,
-  now: Date,
-) {
-  await tx.article.update({
-    where: { id: article.id },
-    data: {
-      status: ArticleStatus.PUBLISHED,
-      publishedAt: now,
-      scheduledAt: null,
-    },
-  });
-
-  await tx.articleStateLog.create({
-    data: {
-      articleId: article.id,
-      fromStatus: ArticleStatus.SCHEDULED,
-      toStatus: ArticleStatus.PUBLISHED,
-      userId: article.authorId,
-      reason: "cron_scheduled_publish",
-    },
-  });
-
-  await tx.auditLog.create({
-    data: {
-      actorId: null,
-      action: "article.cron_publish",
-      entityType: "Article",
-      entityId: article.id,
-      metadata: {
-        from: ArticleStatus.SCHEDULED,
-        to: ArticleStatus.PUBLISHED,
-        scheduledAt: article.scheduledAt?.toISOString() ?? null,
-      },
-    },
-  });
 }

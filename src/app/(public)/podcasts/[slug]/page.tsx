@@ -2,6 +2,12 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { format } from "date-fns";
 
+export const revalidate = 300;
+
+export async function generateStaticParams() {
+  return [];
+}
+
 export default async function PodcastDetailPage({
   params,
 }: {

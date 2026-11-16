@@ -4,6 +4,12 @@ import { ArticleBody } from "@/components/article/ArticleBody";
 import { localePath } from "@/i18n";
 import type { Metadata } from "next";
 
+export const revalidate = 300;
+
+export async function generateStaticParams() {
+  return [];
+}
+
 export async function generateMetadata({
   params,
 }: {

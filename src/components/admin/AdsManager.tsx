@@ -9,6 +9,7 @@ import {
   adUpdateAction,
 } from "@/server/admin/actions";
 import { uploadMediaFile } from "@/lib/admin-media-client";
+import { AdminTable } from "@/components/admin/AdminTable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -315,14 +316,15 @@ export function AdsManager({ slots }: { slots: AdSlotRow[] }) {
       <div className="space-y-8">
         {primarySlots.map((slot) => (
           <section key={slot.id} className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="font-serif text-lg font-semibold">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="min-w-0 break-words font-serif text-lg font-semibold">
                 {SLOT_LABELS[slot.key] ?? slot.name}
               </h2>
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
+                className="shrink-0"
                 onClick={() => openCreate(slot.id)}
                 disabled={pending}
               >
@@ -334,71 +336,71 @@ export function AdsManager({ slots }: { slots: AdSlotRow[] }) {
                 No advertisements in this slot yet.
               </p>
             ) : (
-              <div className="overflow-x-auto border border-border bg-background">
-                <table className="min-w-full text-left text-sm">
-                  <thead className="border-b border-border bg-muted/50">
-                    <tr>
-                      <th className="px-3 py-2">Preview</th>
-                      <th className="px-3 py-2">Name</th>
-                      <th className="px-3 py-2">Link</th>
-                      <th className="px-3 py-2">Status</th>
-                      <th className="px-3 py-2">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {slot.advertisements.map((ad) => (
-                      <tr
-                        key={ad.id}
-                        className="border-b border-border last:border-0"
+              <AdminTable>
+                <thead>
+                  <tr>
+                    <th>Preview</th>
+                    <th>Name</th>
+                    <th>Link</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {slot.advertisements.map((ad) => (
+                    <tr key={ad.id}>
+                      <td data-label="Preview">
+                        {ad.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={ad.imageUrl}
+                            alt=""
+                            className="h-12 w-24 max-w-full object-contain"
+                          />
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td data-label="Name" className="break-words font-medium">
+                        {ad.name}
+                      </td>
+                      <td
+                        data-label="Link"
+                        className="max-w-full break-all text-muted-foreground md:max-w-[14rem] md:truncate md:break-normal"
                       >
-                        <td className="px-3 py-2">
-                          {ad.imageUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={ad.imageUrl}
-                              alt=""
-                              className="h-12 w-24 object-contain"
-                            />
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2 font-medium">{ad.name}</td>
-                        <td className="px-3 py-2 max-w-[14rem] truncate text-muted-foreground">
-                          {ad.destinationUrl || "—"}
-                        </td>
-                        <td className="px-3 py-2">
-                          <Badge variant={ad.isActive ? "success" : "muted"}>
-                            {ad.isActive ? "Active" : "Off"}
-                          </Badge>
-                        </td>
-                        <td className="px-3 py-2">
-                          <div className="flex flex-wrap gap-1.5">
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              disabled={pending}
-                              onClick={() => openEdit(ad)}
-                            >
-                              Edit
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="destructive"
-                              disabled={pending}
-                              onClick={() => remove(ad.id)}
-                            >
-                              Delete
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                        {ad.destinationUrl || "—"}
+                      </td>
+                      <td data-label="Status">
+                        <Badge variant={ad.isActive ? "success" : "muted"}>
+                          {ad.isActive ? "Active" : "Off"}
+                        </Badge>
+                      </td>
+                      <td data-label="Actions" className="admin-table-actions">
+                        <div className="flex flex-wrap gap-1.5">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={pending}
+                            onClick={() => openEdit(ad)}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="destructive"
+                            disabled={pending}
+                            onClick={() => remove(ad.id)}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </AdminTable>
             )}
           </section>
         ))}

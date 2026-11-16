@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Pagination } from "@/components/ui/pagination";
 import { ArticlesBulkForm } from "@/components/admin/ArticlesBulkForm";
+import { AdminTable } from "@/components/admin/AdminTable";
+import { ArticleRowActions } from "@/components/admin/ArticleRowActions";
 
 export const metadata = { title: "Articles" };
 
@@ -27,6 +29,7 @@ export default async function AdminArticlesPage({
     status,
     page: Number(sp.page || "1"),
   });
+  const canTrash = hasPermission(user.role, "article:trash");
 
   const hrefForPage = (page: number) => {
     const params = new URLSearchParams();
@@ -39,92 +42,147 @@ export default async function AdminArticlesPage({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-serif text-2xl font-semibold">Articles</h1>
+        <h1 className="min-w-0 font-serif text-2xl font-semibold">Articles</h1>
         {hasPermission(user.role, "article:create") ? (
           <Link
             href="/admin/articles/new"
-            className="inline-flex h-10 items-center justify-center rounded-md bg-gvn-navy px-4 text-sm font-semibold text-white hover:bg-gvn-deep-navy"
+            className="inline-flex h-10 shrink-0 items-center justify-center rounded-md bg-gvn-navy px-4 text-sm font-semibold text-white hover:bg-gvn-deep-navy"
           >
             New article
           </Link>
         ) : null}
       </div>
 
-      <form className="flex flex-wrap gap-2">
+      <form className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
         <input
           name="q"
           defaultValue={sp.q}
           placeholder="Search…"
-          className="h-10 rounded-md border border-border bg-background px-3 text-sm"
+          className="h-10 w-full min-w-0 rounded-md border border-border bg-background px-3 text-sm sm:w-auto sm:min-w-[12rem]"
         />
-        <select
-          name="status"
-          defaultValue={sp.status || ""}
-          className="h-10 rounded-md border border-border bg-background px-3 text-sm"
-        >
-          <option value="">All statuses</option>
-          {Object.values(ArticleStatus).map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-        <Button type="submit" variant="outline">
-          Filter
-        </Button>
+        <div className="grid grid-cols-[1fr_auto] gap-2 sm:contents">
+          <select
+            name="status"
+            defaultValue={sp.status || ""}
+            className="h-10 w-full min-w-0 rounded-md border border-border bg-background px-3 text-sm sm:w-auto"
+          >
+            <option value="">All statuses</option>
+            {Object.values(ArticleStatus).map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+          <Button type="submit" variant="outline" className="min-h-10 sm:w-auto">
+            Filter
+          </Button>
+        </div>
       </form>
 
-      <ArticlesBulkForm canTrash={hasPermission(user.role, "article:trash")}>
-        <div className="overflow-x-auto border border-border bg-background">
-          <table className="min-w-full text-left text-sm">
-            <thead className="border-b border-border bg-muted/50">
+      <ArticlesBulkForm canTrash={canTrash}>
+        {/* Mobile compact cards */}
+        <ul className="space-y-3 md:hidden">
+          {data.items.map((a) => (
+            <li
+              key={a.id}
+              className="rounded-md border border-border bg-background p-3"
+            >
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  name="ids"
+                  value={a.id}
+                  className="mt-1 h-4 w-4 shrink-0"
+                  aria-label={`Select ${a.headline}`}
+                />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <Link
+                      href={`/admin/articles/${a.id}/edit`}
+                      className="break-words text-sm font-semibold leading-snug hover:text-gvn-red"
+                    >
+                      {a.headline}
+                    </Link>
+                    <Badge variant="muted" className="shrink-0">
+                      {a.status}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {a.author.name}
+                    <span aria-hidden="true"> · </span>
+                    {a.category.nameEn}
+                    <span aria-hidden="true"> · </span>
+                    {format(a.updatedAt, "MMM d, yyyy")}
+                    <span aria-hidden="true"> · </span>
+                    {a.viewCount} views
+                  </p>
+                  <ArticleRowActions articleId={a.id} canTrash={canTrash} />
+                </div>
+              </div>
+            </li>
+          ))}
+          {data.items.length === 0 ? (
+            <li className="rounded-md border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
+              No articles found.
+            </li>
+          ) : null}
+        </ul>
+
+        {/* Desktop table */}
+        <div className="hidden md:block">
+          <AdminTable>
+            <thead>
               <tr>
-                <th className="px-3 py-2 w-10" />
-                <th className="px-3 py-2">Title</th>
-                <th className="px-3 py-2">Author</th>
-                <th className="px-3 py-2">Category</th>
-                <th className="px-3 py-2">Status</th>
-                <th className="px-3 py-2">Updated</th>
-                <th className="px-3 py-2">Views</th>
+                <th className="w-10" />
+                <th>Title</th>
+                <th>Author</th>
+                <th>Category</th>
+                <th>Status</th>
+                <th>Updated</th>
+                <th>Views</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {data.items.map((a) => (
-                <tr key={a.id} className="border-b border-border last:border-0">
-                  <td className="px-3 py-2">
-                    <input type="checkbox" name="ids" value={a.id} />
+                <tr key={a.id}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      name="ids"
+                      value={a.id}
+                      aria-label={`Select ${a.headline}`}
+                    />
                   </td>
-                  <td className="px-3 py-2">
+                  <td>
                     <Link
                       href={`/admin/articles/${a.id}/edit`}
-                      className="font-medium hover:text-gvn-red"
+                      className="break-words font-medium hover:text-gvn-red"
                     >
                       {a.headline}
                     </Link>
                   </td>
-                  <td className="px-3 py-2">{a.author.name}</td>
-                  <td className="px-3 py-2">{a.category.nameEn}</td>
-                  <td className="px-3 py-2">
+                  <td>{a.author.name}</td>
+                  <td>{a.category.nameEn}</td>
+                  <td>
                     <Badge variant="muted">{a.status}</Badge>
                   </td>
-                  <td className="px-3 py-2">
-                    {format(a.updatedAt, "yyyy-MM-dd HH:mm")}
+                  <td>{format(a.updatedAt, "yyyy-MM-dd HH:mm")}</td>
+                  <td>{a.viewCount}</td>
+                  <td className="admin-table-actions">
+                    <ArticleRowActions articleId={a.id} canTrash={canTrash} />
                   </td>
-                  <td className="px-3 py-2">{a.viewCount}</td>
                 </tr>
               ))}
               {data.items.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={7}
-                    className="px-3 py-8 text-center text-muted-foreground"
-                  >
+                  <td colSpan={8} className="admin-table-empty">
                     No articles found.
                   </td>
                 </tr>
               ) : null}
             </tbody>
-          </table>
+          </AdminTable>
         </div>
       </ArticlesBulkForm>
 

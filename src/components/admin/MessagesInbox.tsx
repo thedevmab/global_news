@@ -7,6 +7,7 @@ import {
   messageDeleteAction,
   messageStatusAction,
 } from "@/server/admin/actions";
+import { AdminTable } from "@/components/admin/AdminTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -68,132 +69,119 @@ export function MessagesInbox({ items }: { items: MessageRow[] }) {
           {error}
         </p>
       ) : null}
-      <div className="overflow-x-auto border border-border bg-background">
-        <table className="min-w-full text-left text-sm">
-          <thead className="border-b border-border bg-muted/50">
-            <tr>
-              <th className="px-3 py-2">Name</th>
-              <th className="px-3 py-2">Email</th>
-              <th className="px-3 py-2">Subject</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Date</th>
-              <th className="px-3 py-2">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item) => {
-              const open = expandedId === item.id;
-              return (
-                <tr
-                  key={item.id}
-                  className="border-b border-border align-top last:border-0"
-                >
-                  <td className="px-3 py-2 font-medium">{item.name}</td>
-                  <td className="px-3 py-2">
-                    <a
-                      href={`mailto:${item.email}`}
-                      className="text-gvn-navy hover:underline"
-                    >
-                      {item.email}
-                    </a>
-                  </td>
-                  <td className="px-3 py-2">
-                    <button
-                      type="button"
-                      className="text-left font-medium hover:text-gvn-red"
-                      onClick={() =>
-                        setExpandedId(open ? null : item.id)
-                      }
-                    >
-                      {item.subject}
-                    </button>
-                    {open ? (
-                      <p className="mt-2 max-w-md whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground">
-                        {item.message}
-                      </p>
-                    ) : null}
-                  </td>
-                  <td className="px-3 py-2">
-                    <Badge variant={statusVariant(item.status)}>
-                      {item.status}
-                    </Badge>
-                  </td>
-                  <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">
-                    {item.createdAt}
-                  </td>
-                  <td className="px-3 py-2">
-                    <div className="flex flex-wrap gap-1.5">
-                      {item.status === "NEW" ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          disabled={pending}
-                          onClick={() =>
-                            run(() =>
-                              messageStatusAction(item.id, "READ"),
-                            )
-                          }
-                        >
-                          Mark read
-                        </Button>
-                      ) : null}
-                      {item.status !== "ARCHIVED" ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          disabled={pending}
-                          onClick={() =>
-                            run(() =>
-                              messageStatusAction(item.id, "ARCHIVED"),
-                            )
-                          }
-                        >
-                          Archive
-                        </Button>
-                      ) : null}
-                      {item.status === "ARCHIVED" ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          disabled={pending}
-                          onClick={() =>
-                            run(() =>
-                              messageStatusAction(item.id, "READ"),
-                            )
-                          }
-                        >
-                          Unarchive
-                        </Button>
-                      ) : null}
+      <AdminTable>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Subject</th>
+            <th>Status</th>
+            <th>Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((item) => {
+            const open = expandedId === item.id;
+            return (
+              <tr key={item.id} className="align-top">
+                <td data-label="Name" className="font-medium">
+                  {item.name}
+                </td>
+                <td data-label="Email">
+                  <a
+                    href={`mailto:${item.email}`}
+                    className="break-all text-gvn-navy hover:underline"
+                  >
+                    {item.email}
+                  </a>
+                </td>
+                <td data-label="Subject">
+                  <button
+                    type="button"
+                    className="break-words text-left font-medium hover:text-gvn-red"
+                    onClick={() => setExpandedId(open ? null : item.id)}
+                  >
+                    {item.subject}
+                  </button>
+                  {open ? (
+                    <p className="mt-2 w-full max-w-none whitespace-pre-wrap break-words text-xs leading-relaxed text-muted-foreground">
+                      {item.message}
+                    </p>
+                  ) : null}
+                </td>
+                <td data-label="Status">
+                  <Badge variant={statusVariant(item.status)}>
+                    {item.status}
+                  </Badge>
+                </td>
+                <td data-label="Date" className="text-muted-foreground">
+                  {item.createdAt}
+                </td>
+                <td data-label="Actions" className="admin-table-actions">
+                  <div className="flex flex-wrap gap-1.5">
+                    {item.status === "NEW" ? (
                       <Button
                         type="button"
                         size="sm"
-                        variant="destructive"
+                        variant="outline"
                         disabled={pending}
-                        onClick={() => {
-                          if (
-                            !window.confirm(
-                              "Delete this message permanently?",
-                            )
-                          ) {
-                            return;
-                          }
-                          run(() => messageDeleteAction(item.id));
-                        }}
+                        onClick={() =>
+                          run(() => messageStatusAction(item.id, "READ"))
+                        }
                       >
-                        Delete
+                        Mark read
                       </Button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                    ) : null}
+                    {item.status !== "ARCHIVED" ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={pending}
+                        onClick={() =>
+                          run(() => messageStatusAction(item.id, "ARCHIVED"))
+                        }
+                      >
+                        Archive
+                      </Button>
+                    ) : null}
+                    {item.status === "ARCHIVED" ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={pending}
+                        onClick={() =>
+                          run(() => messageStatusAction(item.id, "READ"))
+                        }
+                      >
+                        Unarchive
+                      </Button>
+                    ) : null}
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="destructive"
+                      disabled={pending}
+                      onClick={() => {
+                        if (
+                          !window.confirm("Delete this message permanently?")
+                        ) {
+                          return;
+                        }
+                        run(() => messageDeleteAction(item.id));
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </AdminTable>
     </div>
   );
 }

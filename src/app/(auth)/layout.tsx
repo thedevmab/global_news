@@ -1,15 +1,18 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
   title: "Sign in | GVN",
 };
 
-export default function AuthLayout({
+export default async function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Nonce CSP requires a request; do not prerender login/reset.
+  await connection();
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12 dark:bg-gradient-to-br dark:from-gvn-deep-navy dark:via-gvn-navy dark:to-[#1a3358]">
       <div className="auth-panel w-full max-w-md">{children}</div>

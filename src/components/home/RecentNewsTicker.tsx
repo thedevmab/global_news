@@ -1,7 +1,4 @@
-"use client";
-
 import Link from "next/link";
-import { useMemo, useState } from "react";
 import { localePath, type Locale } from "@/i18n";
 import { cn } from "@/lib/utils";
 
@@ -22,21 +19,11 @@ export function RecentNewsTicker({
   locale: Locale;
   label: string;
 }) {
-  const [paused, setPaused] = useState(false);
-
-  const safeItems = useMemo(
-    () => items.filter((item) => item.headline.trim().length > 0),
-    [items],
-  );
-
-  const track = useMemo(() => {
-    if (safeItems.length === 0) return [];
-    const copies = safeItems.length === 1 ? 4 : 2;
-    return Array.from({ length: copies }, () => safeItems).flat();
-  }, [safeItems]);
-
+  const safeItems = items.filter((item) => item.headline.trim().length > 0);
   if (safeItems.length === 0) return null;
 
+  const copies = safeItems.length === 1 ? 4 : 2;
+  const track = Array.from({ length: copies }, () => safeItems).flat();
   const durationSec = Math.max(24, safeItems.length * 8);
 
   return (
@@ -49,15 +36,12 @@ export function RecentNewsTicker({
         <span className="inline-flex shrink-0 items-center rounded-sm bg-gvn-red px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
           {label}
         </span>
-        <div
-          className="relative min-w-0 flex-1 overflow-hidden"
-          onMouseEnter={() => setPaused(true)}
-          onMouseLeave={() => setPaused(false)}
-        >
+        <div className="group/ticker relative min-w-0 flex-1 overflow-hidden">
           <ul
             className={cn(
-              "flex w-max items-center whitespace-nowrap text-sm font-medium",
-              !paused && "animate-gvn-ticker",
+              "flex w-max items-center whitespace-nowrap text-sm font-medium animate-gvn-ticker",
+              "group-hover/ticker:[animation-play-state:paused]",
+              "group-focus-within/ticker:[animation-play-state:paused]",
             )}
             style={{ animationDuration: `${durationSec}s` }}
           >

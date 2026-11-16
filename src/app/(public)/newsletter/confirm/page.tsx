@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { confirmNewsletter } from "@/server/newsletter/service";
 
 export const metadata = { title: "Confirm subscription", robots: { index: false } };
@@ -7,6 +8,7 @@ export default async function ConfirmNewsletterPage({
 }: {
   searchParams: Promise<{ token?: string }>;
 }) {
+  await connection();
   const { token } = await searchParams;
   let ok = false;
   let error = "";

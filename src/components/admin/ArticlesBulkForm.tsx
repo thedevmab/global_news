@@ -30,10 +30,10 @@ export function ArticlesBulkForm({
 
   return (
     <form onSubmit={onSubmit} className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="grid grid-cols-[1fr_auto] items-center gap-2 sm:flex sm:flex-wrap">
         <select
           name="bulkTo"
-          className="h-10 rounded-md border border-border bg-background px-3 text-sm"
+          className="h-10 w-full min-w-0 rounded-md border border-border bg-background px-3 text-sm sm:w-auto"
           defaultValue=""
         >
           <option value="" disabled>
@@ -43,7 +43,12 @@ export function ArticlesBulkForm({
           <option value="DRAFT">Return to draft</option>
           {canTrash ? <option value="TRASH">Move to trash</option> : null}
         </select>
-        <Button type="submit" variant="outline" disabled={pending}>
+        <Button
+          type="submit"
+          variant="outline"
+          disabled={pending}
+          className="min-h-10 shrink-0"
+        >
           {pending ? "Working…" : "Apply"}
         </Button>
       </div>

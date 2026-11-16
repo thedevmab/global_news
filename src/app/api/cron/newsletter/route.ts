@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { timingSafeEqualString } from "@/lib/security/tokens";
+import { CampaignStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { sendEmail } from "@/lib/email";
-import { logger } from "@/lib/logger";
+import { timingSafeEqualString } from "@/lib/security/tokens";
+import { sendCampaignBatch } from "@/server/newsletter/service";
 
 export async function POST(req: Request) {
   const secret = process.env.CRON_SECRET || "";
@@ -20,52 +20,15 @@ export async function POST(req: Request) {
   }
 
   const campaigns = await prisma.newsletterCampaign.findMany({
-    where: { status: "SENDING" },
+    where: { status: CampaignStatus.SENDING },
     take: 1,
-    include: {
-      recipients: {
-        where: { sentAt: null },
-        take: 50,
-        include: { subscriber: true },
-      },
-    },
+    select: { id: true },
   });
 
   let sent = 0;
   for (const campaign of campaigns) {
-    for (const recipient of campaign.recipients) {
-      if (recipient.subscriber.status !== "ACTIVE") continue;
-      try {
-        await sendEmail({
-          to: recipient.subscriber.email,
-          subject: campaign.subject,
-          html: campaign.bodyHtml,
-        });
-        await prisma.campaignRecipient.update({
-          where: { id: recipient.id },
-          data: { sentAt: new Date() },
-        });
-        sent += 1;
-      } catch (err) {
-        logger.error("newsletter.send_failed", {
-          recipientId: recipient.id,
-          error: String(err),
-        });
-        await prisma.campaignRecipient.update({
-          where: { id: recipient.id },
-          data: { error: String(err) },
-        });
-      }
-    }
-    const remaining = await prisma.campaignRecipient.count({
-      where: { campaignId: campaign.id, sentAt: null },
-    });
-    if (remaining === 0) {
-      await prisma.newsletterCampaign.update({
-        where: { id: campaign.id },
-        data: { status: "SENT", sentAt: new Date() },
-      });
-    }
+    const result = await sendCampaignBatch(campaign.id);
+    sent += result.sent;
   }
 
   return NextResponse.json({ sent });

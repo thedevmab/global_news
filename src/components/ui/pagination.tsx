@@ -19,17 +19,20 @@ export function Pagination({
   return (
     <nav
       aria-label="Pagination"
-      className={cn("flex items-center justify-center gap-3", className)}
+      className={cn(
+        "flex flex-wrap items-center justify-center gap-3",
+        className,
+      )}
     >
       {prev ? (
         <Link
           href={hrefForPage(prev)}
-          className="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted"
+          className="inline-flex min-h-11 items-center rounded-md border border-border px-3 py-2 text-sm hover:bg-muted"
         >
           Previous
         </Link>
       ) : (
-        <span className="rounded-md border border-border px-3 py-2 text-sm opacity-40">
+        <span className="inline-flex min-h-11 items-center rounded-md border border-border px-3 py-2 text-sm opacity-40">
           Previous
         </span>
       )}
@@ -39,12 +42,12 @@ export function Pagination({
       {next ? (
         <Link
           href={hrefForPage(next)}
-          className="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted"
+          className="inline-flex min-h-11 items-center rounded-md border border-border px-3 py-2 text-sm hover:bg-muted"
         >
           Next
         </Link>
       ) : (
-        <span className="rounded-md border border-border px-3 py-2 text-sm opacity-40">
+        <span className="inline-flex min-h-11 items-center rounded-md border border-border px-3 py-2 text-sm opacity-40">
           Next
         </span>
       )}

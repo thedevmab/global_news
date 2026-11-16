@@ -39,6 +39,31 @@ const nextConfig: NextConfig = {
         hostname: "i4.ytimg.com",
         pathname: "/vi/**",
       },
+      {
+        protocol: "https",
+        hostname: "a.espncdn.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "a1.espncdn.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "a2.espncdn.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "www.thesportsdb.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "r2.thesportsdb.com",
+        pathname: "/**",
+      },
     ],
   },
   async rewrites() {

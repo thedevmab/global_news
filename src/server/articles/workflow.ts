@@ -11,6 +11,7 @@ import {
 } from "@/lib/rbac";
 import { ForbiddenError, ValidationError } from "@/lib/errors";
 import type { TxClient } from "@/lib/db";
+import { invalidate, tags } from "@/server/cache";
 
 export async function transitionArticleStatus(
   tx: TxClient,
@@ -99,6 +100,13 @@ export async function transitionArticleStatus(
       metadata: { from, to, reason: reason ?? null },
     },
   });
+
+  invalidate(
+    tags.articles,
+    tags.article(article.id),
+    tags.homepage,
+    tags.breaking,
+  );
 
   return updated;
 }

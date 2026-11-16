@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Youtube } from "lucide-react";
 import { localePath, type Locale } from "@/i18n";
 import { getDictionary } from "@/i18n";
 import type { NavCategory } from "@/components/layout/Header";
@@ -100,10 +100,12 @@ export function MobileNav({
               </Link>
               <Link
                 href={localePath(locale, "/videos")}
-                className="rounded px-3 py-2 text-sm hover:bg-chrome-muted"
+                className="inline-flex items-center gap-2 rounded px-3 py-2 text-sm hover:bg-chrome-muted"
+                aria-label={dict.nav.videos}
                 onClick={() => setOpen(false)}
               >
-                {dict.nav.videos}
+                <Youtube className="h-4 w-4 shrink-0" aria-hidden />
+                <span className="sr-only">{dict.nav.videos}</span>
               </Link>
               <Link
                 href={localePath(locale, "/podcasts")}

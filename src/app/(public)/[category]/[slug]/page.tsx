@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 import { ArticlePageView } from "@/components/public/ArticlePage";
-import { getPublishedArticleBySlug } from "@/server/articles/public";
+import { getArticleForRequest } from "@/server/articles/public";
 import { absoluteUrl } from "@/lib/utils";
+
+export const revalidate = 300;
+
+export async function generateStaticParams() {
+  return [];
+}
 
 export async function generateMetadata({
   params,
@@ -9,7 +15,7 @@ export async function generateMetadata({
   params: Promise<{ category: string; slug: string }>;
 }): Promise<Metadata> {
   const { category, slug } = await params;
-  const article = await getPublishedArticleBySlug(category, slug);
+  const article = await getArticleForRequest(category, slug, "en");
   if (!article) return { title: "Not found" };
   const url = absoluteUrl(`/${category}/${slug}`);
   return {

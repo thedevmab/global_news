@@ -131,7 +131,7 @@ export function FeaturedImagePicker({
           ) : recent.length === 0 ? (
             <p className="text-xs text-muted-foreground">No uploads yet.</p>
           ) : (
-            <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+            <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {recent.map((item) => {
                 const url = mediaPublicUrl(item.storageKey);
                 const selected = item.id === value;

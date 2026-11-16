@@ -17,6 +17,9 @@ export const en = {
     breaking: "Breaking News",
     justIn: "Just in",
     latest: "Latest News",
+    latestStandfirst:
+      "A continuously updated archive of the newest stories from our newsroom.",
+    allFilter: "All",
     viewAll: "View all",
     loadMore: "Load more",
     mostRead: "Most read",
@@ -53,6 +56,30 @@ export const en = {
     placeholder: "Search headlines and stories…",
     noResults: "No results found",
     tryCategories: "Try browsing popular categories",
+    enterQuery: "Enter a query to search Global Voice Network.",
+    resultsCount: "{count} result(s) for “{query}”",
+    typeArticle: "Article",
+    typeVideo: "Video",
+    typePodcast: "Podcast",
+    filters: {
+      category: "Category",
+      allCategories: "All categories",
+      type: "Type",
+      allTypes: "All types",
+      language: "Language",
+      allLanguages: "All languages",
+      langEn: "English",
+      langAm: "Amharic",
+      author: "Author",
+      allAuthors: "All authors",
+      from: "From",
+      to: "To",
+      sort: "Sort",
+      sortRelevance: "Relevance",
+      sortNewest: "Newest",
+      sortOldest: "Oldest",
+      clear: "Clear filters",
+    },
   },
   newsletter: {
     title: "Stay informed",
@@ -254,6 +281,8 @@ export type Dictionary = {
     breaking: string;
     justIn: string;
     latest: string;
+    latestStandfirst: string;
+    allFilter: string;
     viewAll: string;
     loadMore: string;
     mostRead: string;
@@ -287,6 +316,30 @@ export type Dictionary = {
     placeholder: string;
     noResults: string;
     tryCategories: string;
+    enterQuery: string;
+    resultsCount: string;
+    typeArticle: string;
+    typeVideo: string;
+    typePodcast: string;
+    filters: {
+      category: string;
+      allCategories: string;
+      type: string;
+      allTypes: string;
+      language: string;
+      allLanguages: string;
+      langEn: string;
+      langAm: string;
+      author: string;
+      allAuthors: string;
+      from: string;
+      to: string;
+      sort: string;
+      sortRelevance: string;
+      sortNewest: string;
+      sortOldest: string;
+      clear: string;
+    };
   };
   newsletter: {
     title: string;

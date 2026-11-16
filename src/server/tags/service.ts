@@ -3,6 +3,7 @@ import { requirePermission, type AuthUser } from "@/lib/rbac";
 import { NotFoundError, ValidationError } from "@/lib/errors";
 import { slugify } from "@/lib/utils";
 import { writeAudit } from "@/server/audit";
+import { invalidate, tags } from "@/server/cache";
 import { z } from "zod";
 
 const tagSchema = z.object({
@@ -38,6 +39,7 @@ export async function createTag(user: AuthUser, input: unknown) {
     entityType: "Tag",
     entityId: tag.id,
   });
+  invalidate(tags.tagsAll, tags.articles);
   return tag;
 }
 
@@ -57,6 +59,7 @@ export async function updateTag(user: AuthUser, id: string, input: unknown) {
     entityType: "Tag",
     entityId: id,
   });
+  invalidate(tags.tagsAll, tags.articles);
   return tag;
 }
 
@@ -77,17 +80,14 @@ export async function mergeTags(
 
   await prisma.$transaction(async (tx) => {
     const links = await tx.articleTag.findMany({ where: { tagId: sourceId } });
-    for (const link of links) {
-      const exists = await tx.articleTag.findUnique({
-        where: {
-          articleId_tagId: { articleId: link.articleId, tagId: targetId },
-        },
+    if (links.length) {
+      await tx.articleTag.createMany({
+        data: links.map((l) => ({
+          articleId: l.articleId,
+          tagId: targetId,
+        })),
+        skipDuplicates: true,
       });
-      if (!exists) {
-        await tx.articleTag.create({
-          data: { articleId: link.articleId, tagId: targetId },
-        });
-      }
     }
     await tx.articleTag.deleteMany({ where: { tagId: sourceId } });
     await tx.tag.delete({ where: { id: sourceId } });
@@ -100,6 +100,7 @@ export async function mergeTags(
     entityId: targetId,
     metadata: { sourceId, targetId },
   });
+  invalidate(tags.tagsAll, tags.articles);
 }
 
 export async function deleteTag(user: AuthUser, id: string) {
@@ -112,4 +113,5 @@ export async function deleteTag(user: AuthUser, id: string) {
     entityType: "Tag",
     entityId: id,
   });
+  invalidate(tags.tagsAll, tags.articles);
 }

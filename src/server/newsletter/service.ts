@@ -11,7 +11,7 @@ import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { requirePermission, type AuthUser } from "@/lib/rbac";
 import { generateToken, hashToken } from "@/lib/security/tokens";
-import { absoluteUrl, normalizeEmail } from "@/lib/utils";
+import { absoluteUrl, mapWithConcurrency, normalizeEmail } from "@/lib/utils";
 import { writeAudit } from "@/server/audit";
 
 function unsubscribeSigningSecret(): string {
@@ -188,7 +188,7 @@ export async function processPendingCampaigns(limit = 5): Promise<{
   return { processed: campaigns.length, sent, skipped: false };
 }
 
-async function sendCampaignBatch(campaignId: string) {
+export async function sendCampaignBatch(campaignId: string) {
   const campaign = await prisma.newsletterCampaign.findUnique({
     where: { id: campaignId },
   });
@@ -202,16 +202,25 @@ async function sendCampaignBatch(campaignId: string) {
     take: 100,
   });
 
-  let sent = 0;
-  for (const recipient of recipients) {
+  const inactiveIds: string[] = [];
+  const toSend = recipients.filter((recipient) => {
     if (!isEligibleForSend(recipient.subscriber.status)) {
-      await prisma.campaignRecipient.update({
-        where: { id: recipient.id },
-        data: { error: "unsubscribed_or_inactive", sentAt: new Date() },
-      });
-      continue;
+      inactiveIds.push(recipient.id);
+      return false;
     }
+    return true;
+  });
 
+  if (inactiveIds.length) {
+    await prisma.campaignRecipient.updateMany({
+      where: { id: { in: inactiveIds } },
+      data: { error: "unsubscribed_or_inactive", sentAt: new Date() },
+    });
+  }
+
+  const sentIds: string[] = [];
+
+  await mapWithConcurrency(toSend, 5, async (recipient) => {
     try {
       const unsubToken = createUnsubscribeLinkToken(recipient.subscriber.id);
       const footer = newsletterUnsubscribeEmail({
@@ -223,11 +232,7 @@ async function sendCampaignBatch(campaignId: string) {
         html: `${campaign.bodyHtml}<hr/>${footer.html}`,
         text: footer.text,
       });
-      await prisma.campaignRecipient.update({
-        where: { id: recipient.id },
-        data: { sentAt: new Date(), error: null },
-      });
-      sent += 1;
+      sentIds.push(recipient.id);
     } catch (err) {
       await prisma.campaignRecipient.update({
         where: { id: recipient.id },
@@ -236,6 +241,13 @@ async function sendCampaignBatch(campaignId: string) {
         },
       });
     }
+  });
+
+  if (sentIds.length) {
+    await prisma.campaignRecipient.updateMany({
+      where: { id: { in: sentIds } },
+      data: { sentAt: new Date(), error: null },
+    });
   }
 
   const remaining = await prisma.campaignRecipient.count({
@@ -249,7 +261,7 @@ async function sendCampaignBatch(campaignId: string) {
     });
   }
 
-  return { sent };
+  return { sent: sentIds.length };
 }
 
 export async function assertCanManageNewsletter(role: string) {

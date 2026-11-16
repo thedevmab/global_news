@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { hasPermission } from "@/lib/rbac";
-import { ArticleEditor } from "@/components/editor/ArticleEditor";
+import { ArticleEditorLazy as ArticleEditor } from "@/components/editor/ArticleEditorLazy";
 
 export const metadata = { title: "New article" };
 

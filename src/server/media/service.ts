@@ -2,10 +2,11 @@ import { prisma } from "@/lib/db";
 import { requirePermission, type AuthUser } from "@/lib/rbac";
 import { ValidationError, ForbiddenError } from "@/lib/errors";
 import { getStorage } from "@/lib/storage";
+import { invalidate, tags } from "@/server/cache";
 import sharp from "sharp";
 import FileType from "file-type";
 
-const MAX_BYTES = 5 * 1024 * 1024;
+export const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp"]);
 const VARIANTS = [
   { label: "small", width: 480 },
@@ -87,6 +88,7 @@ export async function uploadImage(
     },
   });
 
+  invalidate(tags.articles, tags.homepage);
   return media;
 }
 
@@ -140,7 +142,7 @@ export async function updateMediaMeta(
   input: { altText?: string | null; caption?: string | null; credit?: string | null },
 ) {
   requirePermission(user, "media:manage");
-  return prisma.media.update({
+  const updated = await prisma.media.update({
     where: { id },
     data: {
       altText: input.altText,
@@ -148,6 +150,8 @@ export async function updateMediaMeta(
       credit: input.credit,
     },
   });
+  invalidate(tags.articles, tags.homepage);
+  return updated;
 }
 
 export async function deleteMedia(user: AuthUser, mediaId: string) {
@@ -187,4 +191,5 @@ export async function deleteMedia(user: AuthUser, mediaId: string) {
     where: { id: mediaId },
     data: { deletedAt: new Date() },
   });
+  invalidate(tags.articles, tags.homepage);
 }

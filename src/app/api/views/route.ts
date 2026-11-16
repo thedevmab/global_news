@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { isAppError } from "@/lib/errors";
-import { rateLimit } from "@/lib/security/rate-limit";
+import { memoryRateLimit } from "@/lib/security/memory-rate-limit";
 
 const schema = z.object({ articleId: z.string().uuid() });
 
@@ -26,13 +26,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, skipped: "bot" });
     }
 
-    const ip = clientIp(req);
-    await rateLimit({
-      key: `views:${ip}`,
-      limit: 120,
-      windowMs: 60 * 1000,
-    });
-
     const body = schema.parse(await req.json());
     const jar = await cookies();
     const sid =
@@ -47,30 +40,34 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, skipped: "session" });
     }
 
-    const exists = await prisma.article.findFirst({
-      where: { id: body.articleId, deletedAt: null },
-      select: { id: true },
+    const ip = clientIp(req);
+    const limited = memoryRateLimit({
+      key: `views:${ip}`,
+      limit: 120,
+      windowMs: 60 * 1000,
     });
-    if (!exists) {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (!limited.ok) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
     const day = new Date();
     day.setUTCHours(0, 0, 0, 0);
 
-    await prisma.$transaction([
-      prisma.article.update({
-        where: { id: body.articleId },
-        data: { viewCount: { increment: 1 } },
-      }),
-      prisma.articleViewDaily.upsert({
-        where: {
-          articleId_day: { articleId: body.articleId, day },
-        },
-        create: { articleId: body.articleId, day, views: 1 },
-        update: { views: { increment: 1 } },
-      }),
-    ]);
+    const updated = await prisma.article.updateMany({
+      where: { id: body.articleId, deletedAt: null },
+      data: { viewCount: { increment: 1 } },
+    });
+    if (updated.count === 0) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    await prisma.articleViewDaily.upsert({
+      where: {
+        articleId_day: { articleId: body.articleId, day },
+      },
+      create: { articleId: body.articleId, day, views: 1 },
+      update: { views: { increment: 1 } },
+    });
 
     const res = NextResponse.json({ ok: true });
     res.cookies.set("gvn_vid", sid, {

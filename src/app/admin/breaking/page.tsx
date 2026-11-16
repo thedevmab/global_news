@@ -50,7 +50,7 @@ export default async function BreakingAdminPage() {
         <select
           name="articleId"
           required
-          className="h-10 rounded-md border border-border bg-background px-3 text-sm md:col-span-2"
+          className="h-10 w-full max-w-full rounded-md border border-border bg-background px-3 text-sm md:col-span-2"
         >
           <option value="">Select article…</option>
           {articles.map((a) => (
@@ -59,18 +59,21 @@ export default async function BreakingAdminPage() {
             </option>
           ))}
         </select>
-        <Input name="label" placeholder="Ticker label (optional)" />
-        <Input name="expiresAt" type="datetime-local" />
-        <Button type="submit" className="md:w-fit">
+        <Input name="label" placeholder="Ticker label (optional)" className="w-full max-w-full" />
+        <Input name="expiresAt" type="datetime-local" className="w-full max-w-full" />
+        <Button type="submit" className="w-full md:w-fit">
           Add breaking item
         </Button>
       </form>
 
       <ul className="divide-y divide-border border border-border bg-background">
         {items.map((item) => (
-          <li key={item.id} className="flex items-center justify-between gap-3 px-4 py-3">
-            <div>
-              <p className="font-medium">
+          <li
+            key={item.id}
+            className="flex flex-wrap items-start justify-between gap-3 px-4 py-3"
+          >
+            <div className="min-w-0 flex-1">
+              <p className="break-words font-medium">
                 {item.label || item.article?.headline || item.articleId}
               </p>
               <p className="text-xs text-muted-foreground">
@@ -80,7 +83,7 @@ export default async function BreakingAdminPage() {
                   : ""}
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
               <Badge variant={item.isActive ? "accent" : "muted"}>
                 {item.isActive ? "Live" : "Off"}
               </Badge>

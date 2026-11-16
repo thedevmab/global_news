@@ -1,0 +1,15 @@
+export const tags = {
+  articles: "articles",
+  article: (id: string) => `article:${id}`,
+  homepage: "homepage",
+  breaking: "breaking",
+  categories: "categories",
+  tagsAll: "tags",
+  authors: "authors",
+  ads: "ads",
+  settings: "settings",
+  videos: "videos",
+  podcasts: "podcasts",
+  pages: "static-pages",
+  nav: "navigation",
+} as const;

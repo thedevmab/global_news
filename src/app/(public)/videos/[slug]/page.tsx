@@ -5,6 +5,12 @@ import { format } from "date-fns";
 import { prisma } from "@/lib/db";
 import { getChannelVideo } from "@/lib/youtube";
 
+export const revalidate = 300;
+
+export async function generateStaticParams() {
+  return [];
+}
+
 type Params = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {

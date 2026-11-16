@@ -1,1 +1,1 @@
-export { default } from "@/app/(public)/newsletter/unsubscribe/page";
+export { default, metadata } from "@/app/(public)/newsletter/unsubscribe/page";
